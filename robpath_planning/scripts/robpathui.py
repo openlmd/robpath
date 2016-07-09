@@ -88,7 +88,6 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.btnLoadMesh.clicked.connect(self.btnLoadMeshClicked)
         self.btnProcessMesh.clicked.connect(self.btnProcessMeshClicked)
-        self.btnProcessContours.clicked.connect(self.btnProcessContoursClicked)
         self.btnSaveRapid.clicked.connect(self.btnSaveRapidClicked)
 
         self.sbPositionX.valueChanged.connect(self.changePosition)
@@ -106,7 +105,6 @@ class RobPathUI(QtGui.QMainWindow):
         self.timer.timeout.connect(self.updateProcess)
 
         self.robpath = RobPath()
-        self.filled = True
 
     def changePosition(self):
         x = self.sbPositionX.value()
@@ -136,8 +134,8 @@ class RobPathUI(QtGui.QMainWindow):
 
     def updateProcess(self):
         if self.robpath.k < len(self.robpath.levels):
-            self.robpath.update_process(
-                filled=self.filled, contour=not self.filled)
+            self.robpath.update_process(filled=self.chbFilled.isChecked(),
+                                        contour=self.chbContour.isChecked())
             #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
             self.plot.drawPath(self.robpath.path)
             self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
@@ -193,7 +191,7 @@ class RobPathUI(QtGui.QMainWindow):
         turntable = self.sbTurntable.value()
         self.robpath.set_powder(carrier_gas, stirrer, turntable)
 
-    def __process_shape(self):
+    def btnProcessMeshClicked(self):
         if self.processing:
             self.timer.stop()
             self.processing = False
@@ -205,14 +203,6 @@ class RobPathUI(QtGui.QMainWindow):
 
             self.processing = True
             self.timer.start(100)
-
-    def btnProcessMeshClicked(self):
-        self.filled = True
-        self.__process_shape()
-
-    def btnProcessContoursClicked(self):
-        self.filled = False
-        self.__process_shape()
 
     def btnSaveRapidClicked(self):
         self.robpath.save_rapid()
