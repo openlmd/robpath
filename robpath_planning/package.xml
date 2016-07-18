@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>robpath_planning</name>
-  <version>0.4.5</version>
+  <version>0.5.0</version>
   <description>The robpath_planning package</description>
   <maintainer email="jorge.rodriguez@aimen.es">Jorge Rodríguez-Araújo</maintainer>
   <license>BSD</license>
