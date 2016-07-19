@@ -13,9 +13,9 @@ steps:
 A simple interface is provided to process the 3D mesh model, with only three buttons. One of this
 buttons is used to load the STL file, while the model is shown on the interface main window.
 
-![Graphical interface](./robpath/media/part.jpg)
+![Graphical interface](./robpath/media/part.png)
 
-*GUI of RobPath with integrated setting parameters.*
+*RobPath interface showing the loaded mesh part and the setting parameters.*
 
 Loaded the model, the software shows it on a virtual grid that represents the working space where
 the job is going to take place. Using the controllers on the bottom of the right panel the model
@@ -31,9 +31,9 @@ Besides this parameters, the interface also allow to set on the lateral panel th
 parameters (e.g. velocity, laser power, powder feed rate). The third button is required to export
 the robot routine to the robot control unit.
 
-![Slicing of the model](./robpath/media/layers.jpg)
+![Slicing of the model](./robpath/media/layers.png)
 
-*GUI showing the layer-by-layer path planning process.*
+*RobPath interface showing the layer-by-layer path planning process.*
 
 Furthermore, this CAM program is integrated to directly control the AIMEN LMD cell path planning
 and programming, and it is used for the path generation for different LMD applications.
