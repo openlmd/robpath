@@ -34,6 +34,9 @@ class RobPath():
         self.track_distance = (1 - overlap) * width
         print 'Track distance:', self.track_distance
 
+    def set_focus(self, focus):
+        self.track_focus = focus
+
     def set_power(self, power):
         self.rob_parser.power = power
 
@@ -61,11 +64,12 @@ class RobPath():
             self.slices.append(slice)
             if filled:
                 tool_path = self.planning.get_path_from_slices(
-                    [slice], self.track_distance, self.pair)
+                    [slice], self.track_distance, self.pair, focus=self.track_focus)
                 self.pair = not self.pair
                 self.path.extend(tool_path)
             if contour:
-                tool_path = self.planning.get_path_from_slices([slice])
+                tool_path = self.planning.get_path_from_slices(
+                    [slice], focus=self.track_focus)
                 self.path.extend(tool_path)
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)

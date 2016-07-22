@@ -183,13 +183,15 @@ class RobPathUI(QtGui.QMainWindow):
 
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
+        focus = self.sbFocus.value()
         self.robpath.set_speed(speed)
         self.robpath.set_power(power)
+        self.robpath.set_focus(focus)
 
-        carrier_gas = self.sbCarrier.value()
+        carrier = self.sbCarrier.value()
         stirrer = self.sbStirrer.value()
         turntable = self.sbTurntable.value()
-        self.robpath.set_powder(carrier_gas, stirrer, turntable)
+        self.robpath.set_powder(carrier, stirrer, turntable)
 
     def btnProcessMeshClicked(self):
         if self.processing:

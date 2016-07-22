@@ -69,7 +69,7 @@ class Planning:
                     tool_path.append([pnt2, orientation, False])
         return tool_path
 
-    def get_path_from_slices(self, slices, track_distance=None, pair=False):
+    def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0):
         t0 = time.time()
         orientation = np.array((0.0, 0.0, 0.0, 1.0))
         tool_path = []
@@ -78,18 +78,17 @@ class Planning:
             if slice is not None:
                 if track_distance is None:
                     for contour in slice:
+                        contour = contour + np.array([0, 0, focus])
                         for point in contour[:-1]:
                             tool_path.append([point, orientation, True])
                         tool_path.append([contour[-1], orientation, False])
                 else:
-                    path = []
-                    for contour in slice:
-                        fill_lines = self.get_grated(slice, track_distance)
-                        if pair:  # Controls the starting point of the next layer
-                            fill_lines.reverse()
-                        path.extend(self.get_path_from_fill_lines(fill_lines))
+                    slice = [contour + np.array([0, 0, focus]) for contour in slice]
+                    fill_lines = self.get_grated(slice, track_distance)
+                    if pair:  # Controls the starting point of the next layer
+                        fill_lines.reverse()
                     pair = not pair
-                    tool_path.extend(path)
+                    tool_path.extend(self.get_path_from_fill_lines(fill_lines))
             t1 = time.time()
             print '[%.2f%%] Time to path %.3f s.' % ((100.0 * (k + 1)) / len(slices), t1 - t0)
         return tool_path

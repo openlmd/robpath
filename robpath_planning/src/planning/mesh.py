@@ -133,7 +133,7 @@ class Mesh:
         n_vals = np.round((self.z_max - self.z_min) / zdist)
         i_min = ((self.z_max + self.z_min) - (n_vals * zdist)) / 2
         i_max = ((self.z_max + self.z_min) + (n_vals * zdist)) / 2
-        return np.arange(i_min, i_max + zdist, zdist) + 0.00001
+        return np.arange(i_min, i_max, zdist) + 0.00001
 
     def get_z_intersect(self, triangle, z_level):
         """Gets the intersection line of the triangle with the plane in Z."""
