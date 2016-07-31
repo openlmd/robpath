@@ -6,7 +6,7 @@ import calculate as calc
 
 class Planning:
     def __init__(self):
-        pass
+        self.orientation = np.array((0.0, 0.0, 0.0, 1.0))
 
     def get_range_values(self, v_min, v_max, v_dist):
         n_vals = np.round(((v_max - v_min) + v_dist) / v_dist)
@@ -29,8 +29,12 @@ class Planning:
                         point = pnt2
                     else:
                         if (pnt1[0] < x and pnt2[0] > x) or (pnt1[0] > x and pnt2[0] < x):
-                            m, b = calc.line2d(pnt1[:2], pnt2[:2])
-                            point = np.array([x, m * x + b, pnt1[2]])
+                            my, by = calc.line2d((pnt1[0], pnt1[1]),
+                                                 (pnt2[0], pnt2[1]))
+                            # point = np.array([x, my * x + by, pnt1[2]])
+                            mz, bz = calc.line2d((pnt1[0], pnt1[2]),
+                                                 (pnt2[0], pnt2[2]))
+                            point = np.array([x, my * x + by, mz * x + bz])
                     if point is not None:
                         points.append(point)
             if not points == []:
@@ -52,7 +56,6 @@ class Planning:
         return lines
 
     def get_path_from_fill_lines(self, fill_lines):
-        orientation = np.array((0.0, 0.0, 0.0, 1.0))
         tool_path = []
         for line in fill_lines:
             for k in range(0, len(line), 2):
@@ -60,38 +63,49 @@ class Planning:
                 if len(tool_path):
                     last_point = tool_path[-1][0]
                     if np.all(last_point == pnt1):
-                        tool_path[-1] = [pnt2, orientation, False]
+                        tool_path[-1] = [pnt2, self.orientation, False]
                     else:
-                        tool_path.append([pnt1, orientation, True])
-                        tool_path.append([pnt2, orientation, False])
+                        tool_path.append([pnt1, self.orientation, True])
+                        tool_path.append([pnt2, self.orientation, False])
                 else:
-                    tool_path.append([pnt1, orientation, True])
-                    tool_path.append([pnt2, orientation, False])
+                    tool_path.append([pnt1, self.orientation, True])
+                    tool_path.append([pnt2, self.orientation, False])
         return tool_path
 
     def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0):
         t0 = time.time()
-        orientation = np.array((0.0, 0.0, 0.0, 1.0))
-        tool_path = []
+        path = []
         pair = False
         for k, slice in enumerate(slices):
             if slice is not None:
                 if track_distance is None:
                     for contour in slice:
-                        contour = contour + np.array([0, 0, focus])
                         for point in contour[:-1]:
-                            tool_path.append([point, orientation, True])
-                        tool_path.append([contour[-1], orientation, False])
+                            path.append([point, self.orientation, True])
+                        path.append([contour[-1], self.orientation, False])
                 else:
-                    slice = [contour + np.array([0, 0, focus]) for contour in slice]
                     fill_lines = self.get_grated(slice, track_distance)
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair
-                    tool_path.extend(self.get_path_from_fill_lines(fill_lines))
+                    path.extend(self.get_path_from_fill_lines(fill_lines))
             t1 = time.time()
-            print '[%.2f%%] Time to path %.3f s.' % ((100.0 * (k + 1)) / len(slices), t1 - t0)
-        return tool_path
+            print '[%.2f%%] Time to path %.3f s.' % (
+                (100.0 * (k + 1)) / len(slices), t1 - t0)
+        return self.translate_path(path, np.array([0, 0, focus]))
+
+    def translate_path(self, path, position):
+        return [(position + pnt, orient, proc) for (pnt, orient, proc) in path]
+
+    def path_length(self, path):
+        laser_dist, travel_dist = 0, 0
+        for k, (point, orient, process) in enumerate(path[:-1]):
+            dist = calc.distance(path[k][0], path[k+1][0])
+            if process:
+                laser_dist = laser_dist + dist
+            else:
+                travel_dist = travel_dist + dist
+        return laser_dist, travel_dist
 
 
 if __name__ == '__main__':
@@ -121,16 +135,13 @@ if __name__ == '__main__':
     t1 = time.time()
     print 'Time for path:', t1 - t0
 
-    laser_dist = 0
-    travel_dist = 0
-    for k, (point, orientation, process) in enumerate(path[:-1]):
-        dist = calc.distance(path[k][0], path[k+1][0])
-        if process:
-            laser_dist = laser_dist + dist
-        else:
-            travel_dist = travel_dist + dist
-    print 'Total laser distance:', laser_dist
-    print 'Total travel distance:', travel_dist
+    length = planning.path_length(path)
+    print 'Laser distance:', length[0]
+    print 'Travel distance:', length[1]
+
+    import datetime
+    time = length[0] / 8 + length[1] / 50
+    print str(datetime.timedelta(seconds=int(time)))
 
     # # Get path with frames
     # _path = []

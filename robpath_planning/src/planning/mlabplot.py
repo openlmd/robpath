@@ -162,9 +162,9 @@ class MPlot3D():
         frames = np.array(frames)
         self.draw_tools(points, frames)
 
-    def _get_triangular_mesh(self, mesh):
+    def _get_triangular_mesh(self, triangles):
         x, y, z = [], [], []
-        for tri in mesh.triangles:
+        for tri in triangles:
             for pnt in tri:
                 x.append(pnt[0])
                 y.append(pnt[1])
@@ -173,7 +173,7 @@ class MPlot3D():
         return x, y, z, triangles
 
     def draw_mesh(self, mesh, color=WHITE, opacity=0.7):
-        x, y, z, triangles = self._get_triangular_mesh(mesh)
+        x, y, z, triangles = self._get_triangular_mesh(mesh.triangles)
         mlab.triangular_mesh(x, y, z, triangles, color=color,
                              opacity=opacity, representation='surface')
         #mlab.triangular_mesh(x, y, z, triangles, colormap='bone',
@@ -236,8 +236,6 @@ if __name__ == '__main__':
                         [0, 1, 0],
                         [0, 0, 1]])
     point = np.float32([0, 0, 0])
-
-    import calculate as calc
 
     arrow = np.float32([[0, 0, 0], [100, 0, 0]])
 

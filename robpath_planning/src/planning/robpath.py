@@ -1,5 +1,3 @@
-import numpy as np
-
 from mesh import Mesh
 from planning import Planning
 from rapid import Rapid
@@ -13,35 +11,23 @@ class RobPath():
 
     def load_mesh(self, filename):
         self.mesh = Mesh(filename)
-        # TODO: Change bpoints and origin.
-        self.mesh.translate(np.float32([20, 20, 0]))
-        position = self.mesh.bpoint1  # Rename to position
-        size = self.mesh.bpoint2 - self.mesh.bpoint1  # Change by size
-        print np.vstack(self.mesh.triangles)
 
     def translate_mesh(self, position):
-        # TODO: Add reference frame to part.
         self.mesh.translate(position)
 
     def resize_mesh(self, size):
-        scale = size / self.mesh.size
-        self.mesh.scale(scale)
+        self.mesh.scale(size / self.mesh.size)
 
     def set_track(self, height, width, overlap):
         self.track_height = height
         self.track_width = width
         self.track_overlap = overlap
         self.track_distance = (1 - overlap) * width
-        print 'Track distance:', self.track_distance
 
-    def set_focus(self, focus):
-        self.track_focus = focus
-
-    def set_power(self, power):
-        self.rob_parser.power = power
-
-    def set_speed(self, speed):
+    def set_process(self, speed, power, focus):
         self.rob_parser.track_speed = speed
+        self.rob_parser.power = power
+        self.track_focus = focus
 
     def set_powder(self, carrier_gas, stirrer, turntable):
         self.rob_parser.carrier_gas = carrier_gas
@@ -54,7 +40,6 @@ class RobPath():
         self.slices = []
         self.pair = False
         self.levels = self.mesh.get_zlevels(self.track_height)
-        self.mesh.resort_triangles()
         return self.levels
 
     def update_process(self, filled=True, contour=False):
@@ -97,6 +82,7 @@ if __name__ == "__main__":
     robpath = RobPath()
     robpath.load_mesh(filename)
     robpath.set_track(0.5, 2.5, 0.4)
+    robpath.set_focus(0.0)
     levels = robpath.init_process()
     for k, level in enumerate(levels):
         robpath.update_process(filled=True, contour=True)

@@ -158,16 +158,12 @@ class RobPathUI(QtGui.QMainWindow):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
                 self.plot, 'Open file', './', 'Mesh Files (*.stl)')
-            print filename
             self.setWindowTitle('Mesh Viewer: %s' % filename)
             self.robpath.load_mesh(filename)
-            # -----
-            # TODO: Change bpoints.
-            self.updatePosition(self.robpath.mesh.bpoint1)
-            self.updateSize(self.robpath.mesh.bpoint2 - self.robpath.mesh.bpoint1)
-            self.lblInfo.setText('Info:\n')
-            # -----
-            self.plot.drawMesh(self.robpath.mesh)
+
+            self.updatePosition(self.robpath.mesh.position)
+            self.updateSize(self.robpath.mesh.size)
+
             self.btnProcessMesh.setEnabled(True)
             self.btnProcessContours.setEnabled(True)
         except:
@@ -184,9 +180,7 @@ class RobPathUI(QtGui.QMainWindow):
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
         focus = self.sbFocus.value()
-        self.robpath.set_speed(speed)
-        self.robpath.set_power(power)
-        self.robpath.set_focus(focus)
+        self.robpath.set_process(speed, power, focus)
 
         carrier = self.sbCarrier.value()
         stirrer = self.sbStirrer.value()
@@ -199,16 +193,15 @@ class RobPathUI(QtGui.QMainWindow):
             self.processing = False
         else:
             self.plot.drawWorkingArea()
-
             self.update_parameters()
             self.robpath.init_process()
-
             self.processing = True
             self.timer.start(100)
 
     def btnSaveRapidClicked(self):
         self.robpath.save_rapid()
-        QtGui.QMessageBox.information(self, "Export information", "Routine exported to the robot.")
+        QtGui.QMessageBox.information(
+            self, "Export information", "Routine exported to the robot.")
 
     def btnQuitClicked(self):
         QtCore.QCoreApplication.instance().quit()

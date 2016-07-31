@@ -10,25 +10,14 @@ import polyline as poly
 class Mesh:
     def __init__(self, filename):
         # Bounding box
-        self.origin = np.array([0.0, 0.0, 0.0])
-        self.bpoint1 = np.array([0.0, 0.0, 0.0])
-        self.bpoint2 = np.array([0.0, 0.0, 0.0])
+        self.position = np.array([0.0, 0.0, 0.0])
         self.size = np.array([0.0, 0.0, 0.0])
         # Mesh loading routine
-        self.valid = False
         self.triangles = []
-        self.sink = 0
-        if self.load_text_mesh(filename):
-            self.valid = True
+        if self.load_text_mesh(filename) or self.load_binary_mesh(filename):
             self.bounding_box()
-        elif self.load_binary_mesh(filename):
-            self.valid = True
-            self.bounding_box()
-        if self.valid:
-            self.translate(np.float32([0, 0, 0]))  # translates the piece to the origin
-            #TODO: Resort only for calculation
-            #self.resort_triangles()
-        print '> Load file:', filename
+            self.translate(np.zeros(3))  # translates the piece to the origin
+            self.resort_triangles()  # Only for calculation
 
     def load_binary_mesh(self, filename):
         try:
@@ -61,9 +50,8 @@ class Mesh:
         template += " *endloop\n"
         template += " *endfacet\n"
         try:
-            f = open(filename)
-            lines = f.read()
-            f.close()
+            with open(filename, 'r') as f:
+                lines = f.read()
             pattern = re.compile(template, re.MULTILINE)
             results = pattern.findall(lines)
             if results:
@@ -81,47 +69,38 @@ class Mesh:
         return True
 
     def bounding_box(self):
-        bx1, bx2 = 10000, -10000
-        by1, by2 = 10000, -10000
-        bz1, bz2 = 10000, -10000
+        b1 = [10000, 10000, 10000]
+        b2 = [-10000, -10000, -10000]
         for tri in self.triangles:
             for k in range(3):
-                if tri[k, 0] < bx1:
-                    bx1 = tri[k, 0]
-                if tri[k, 0] > bx2:
-                    bx2 = tri[k, 0]
-                if tri[k, 1] < by1:
-                    by1 = tri[k, 1]
-                if tri[k, 1] > by2:
-                    by2 = tri[k, 1]
-                if tri[k, 2] < bz1:
-                    bz1 = tri[k, 2]
-                if tri[k, 2] > bz2:
-                    bz2 = tri[k, 2]
-        self.bpoint1 = np.array([bx1, by1, bz1])
-        self.bpoint2 = np.array([bx2, by2, bz2])
-        self.x_min, self.x_max = bx1, bx2
-        self.y_min, self.y_max = by1, by2
-        self.z_min, self.z_max = bz1, bz2
-        self.size = self.bpoint2 - self.bpoint1
+                for j in range(3):
+                    if tri[k, j] < b1[j]:
+                        b1[j] = tri[k, j]
+                    if tri[k, j] > b2[j]:
+                        b2[j] = tri[k, j]
+        bpnt1, bpnt2 = np.array(b1), np.array(b2)
+        self.position = bpnt1
+        self.size = bpnt2 - bpnt1
 
     def translate(self, point):
-        trans = point - self.bpoint1
+        trans = point - self.position
         for k, tri in enumerate(self.triangles):
             self.triangles[k] = tri + trans
         self.bounding_box()
+        self.resort_triangles()
 
     def scale(self, scale):
         for k, tri in enumerate(self.triangles):
-            self.triangles[k] = tri * scale
+            self.triangles[k] = ((tri - self.position) * scale) + self.position
         self.bounding_box()
+        self.resort_triangles()
 
     def resort_triangles(self):
         """Sorts vertices from smaller to greater Z."""
         # Sorting the triangle according to height makes slicing then easier
-        # point1, point2, point3 = resort(triangle)
+        self.ctriangles = list(self.triangles)
         for k, tri in enumerate(self.triangles):
-            self.triangles[k] = tri[tri[:, 2].argsort()]
+            self.ctriangles[k] = tri[tri[:, 2].argsort()]
 
     def get_range_values(self, v_min, v_max, v_dist):
         n_vals = np.round(((v_max - v_min) + v_dist) / v_dist)
@@ -130,9 +109,11 @@ class Mesh:
         return np.arange(i_min, i_max + v_dist, v_dist)
 
     def get_zlevels(self, zdist):
-        n_vals = np.round((self.z_max - self.z_min) / zdist)
-        i_min = ((self.z_max + self.z_min) - (n_vals * zdist)) / 2
-        i_max = ((self.z_max + self.z_min) + (n_vals * zdist)) / 2
+        zmin, zmax = self.position[2], (self.position + self.size)[2]
+        print 'Zmin, Zmax:', zmin, zmax
+        n_vals = np.round((zmax - zmin) / zdist)
+        i_min = ((zmax + zmin) - (n_vals * zdist)) / 2
+        i_max = ((zmax + zmin) + (n_vals * zdist)) / 2
         return np.arange(i_min, i_max, zdist) + 0.00001
 
     def get_z_intersect(self, triangle, z_level):
@@ -169,7 +150,7 @@ class Mesh:
     def get_slice(self, z_level):
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
-        for triangle in self.triangles:
+        for triangle in self.ctriangles:
             if (triangle[0, 2] < z_level) and (triangle[2, 2] > z_level):
                 intersection = self.get_z_intersect(triangle, z_level)
                 unsorted_lines.append(intersection)
