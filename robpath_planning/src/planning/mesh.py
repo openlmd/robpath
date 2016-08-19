@@ -117,8 +117,7 @@ class Mesh:
         return np.arange(i_min, i_max, zdist) + 0.00001
 
     def get_z_intersect(self, triangle, z_level):
-        """Gets the intersection line of the triangle with the plane in Z."""
-        # Return the intersection of the tringle with the plane.
+        """Gets the intersection line of the plane in Z with the triangle."""
         # Returns None if the triangle does not intersect.
         point1, point2, point3 = triangle
         (x1, y1, z1), (x2, y2, z2), (x3, y3, z3) = point1, point2, point3
@@ -201,8 +200,7 @@ class Mesh:
         self.resort_triangles()
         levels = self.get_zlevels(layer_height)
         for k, z_level in enumerate(levels):
-            slice = self.get_slice(z_level)
-            slices.append(slice)
+            slices.append(self.get_slice(z_level))
             t1 = time.time()
             print '[%.2f%%] Time to slice %.3f s.' % ((100.0 * (k + 1)) / len(levels), t1 - t0)
         return slices

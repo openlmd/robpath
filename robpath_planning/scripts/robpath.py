@@ -18,6 +18,7 @@ from PyQt4 import uic
 
 import numpy as np
 
+from planning.rapid import Rapid
 from planning.robpath import RobPath
 from planning.mlabplot import MPlot3D
 
@@ -105,6 +106,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.timer.timeout.connect(self.updateProcess)
 
         self.robpath = RobPath()
+        self.rapid = Rapid()
 
     def changePosition(self):
         x = self.sbPositionX.value()
@@ -181,11 +183,13 @@ class RobPathUI(QtGui.QMainWindow):
         power = self.sbPower.value()
         focus = self.sbFocus.value()
         self.robpath.set_process(speed, power, focus)
+        self.rapid.set_process(speed, power)
 
         carrier = self.sbCarrier.value()
         stirrer = self.sbStirrer.value()
         turntable = self.sbTurntable.value()
         self.robpath.set_powder(carrier, stirrer, turntable)
+        self.rapid.set_powder(carrier, stirrer, turntable)
 
     def btnProcessMeshClicked(self):
         if self.processing:
@@ -199,7 +203,12 @@ class RobPathUI(QtGui.QMainWindow):
             self.timer.start(100)
 
     def btnSaveRapidClicked(self):
-        self.robpath.save_rapid()
+        filename = 'etna.mod'
+        directory = 'ETNA'
+        routine = self.rapid.path2rapid(self.path)
+        self.rapid.save_file(filename, routine)
+        self.rapid.upload_file(filename, directory)
+        print routine
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
 
