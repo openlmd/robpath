@@ -107,6 +107,11 @@ class Planning:
                 travel_dist = travel_dist + dist
         return laser_dist, travel_dist
 
+    def path_time(self, length, laser_speed, travel_speed):
+        laser_dist, travel_dist = length
+        time = laser_dist / laser_speed + travel_dist / travel_speed
+        return time
+
 
 if __name__ == '__main__':
     import argparse
@@ -135,13 +140,12 @@ if __name__ == '__main__':
     t1 = time.time()
     print 'Time for path:', t1 - t0
 
+    import datetime
     length = planning.path_length(path)
+    time = planning.path_time(length, 8, 50)
     print 'Laser distance:', length[0]
     print 'Travel distance:', length[1]
-
-    import datetime
-    time = length[0] / 8 + length[1] / 50
-    print str(datetime.timedelta(seconds=int(time)))
+    print 'Estimated time:', str(datetime.timedelta(seconds=int(time)))
 
     # # Get path with frames
     # _path = []
