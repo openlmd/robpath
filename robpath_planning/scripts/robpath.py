@@ -68,6 +68,14 @@ class QMayavi(QtGui.QWidget):
         self.drawWorkingArea()
         self.mlab.draw_mesh(mesh)
 
+    def drawMeshes(self, meshes, selected=None):
+        self.drawWorkingArea()
+        for mesh in meshes:
+            if selected is not None and selected == mesh.name:
+                self.mlab.draw_mesh(mesh, color=(1, 0, 0))
+            else:
+                self.mlab.draw_mesh(mesh, color=mesh.color)
+
     def drawPath(self, path):
         self.mlab.draw_path(path)
 
@@ -88,6 +96,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.plot.drawWorkingArea()
 
         self.btnLoadMesh.clicked.connect(self.btnLoadMeshClicked)
+        self.btnSelectMesh.activated.connect(self.btnSelectMeshClicked)
         self.btnProcessMesh.clicked.connect(self.btnProcessMeshClicked)
         self.btnSaveRapid.clicked.connect(self.btnSaveRapidClicked)
 
@@ -101,6 +110,8 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
+        self.dirname = path
+        self.selected = None
         self.processing = False
         self.timer = QtCore.QTimer(self.plot)
         self.timer.timeout.connect(self.updateProcess)
@@ -156,22 +167,32 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeZ.blockSignals(value)
 
     def btnLoadMeshClicked(self):
-        self.blockSignals(True)
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
-                self.plot, 'Open file', './', 'Mesh Files (*.stl)')
-            self.setWindowTitle('Mesh Viewer: %s' % filename)
-            self.robpath.load_mesh(filename)
-
-            self.updatePosition(self.robpath.mesh.position)
-            self.updateSize(self.robpath.mesh.size)
-
-            self.btnProcessMesh.setEnabled(True)
-            self.btnProcessContours.setEnabled(True)
+                self.plot, 'Open file', self.dirname, 'Mesh Files (*.stl)')
+            if filename:
+                name = os.path.basename(filename)
+                if name not in [mesh.name for mesh in self.robpath.meshes]:
+                    self.name = name
+                    self.dirname = os.path.dirname(filename)
+                    self.setWindowTitle('Mesh Viewer: %s' % filename)
+                    self.robpath.load_mesh(filename)
+                    self.btnSelectMesh.addItems([self.name])
+                    self.updateMeshData(self.name)
+                    self.btnProcessMesh.setEnabled(True)
+                    self.btnProcessContours.setEnabled(True)
         except:
             pass
+        #self.plot.drawMesh(self.robpath.mesh)
+        # TOOD: Rename robpath.meshes to robpath.parts
+        self.plot.drawMeshes(self.robpath.meshes, self.name)
+
+    def updateMeshData(self, name):
+        self.robpath.select_mesh(name)
+        self.blockSignals(True)
+        self.updatePosition(self.robpath.mesh.position)
+        self.updateSize(self.robpath.mesh.size)
         self.blockSignals(False)
-        self.plot.drawMesh(self.robpath.mesh)
 
     def update_parameters(self):
         height = self.sbHeight.value() + 0.00001
@@ -190,6 +211,11 @@ class RobPathUI(QtGui.QMainWindow):
         turntable = self.sbTurntable.value()
         self.robpath.set_powder(carrier, stirrer, turntable)
         self.rapid.set_powder(carrier, stirrer, turntable)
+
+    def btnSelectMeshClicked(self):
+        self.name = self.btnSelectMesh.currentText()
+        self.updateMeshData(self.name)
+        self.plot.drawMeshes(self.robpath.meshes, selected=self.name)
 
     def btnProcessMeshClicked(self):
         if self.processing:

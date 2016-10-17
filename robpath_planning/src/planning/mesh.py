@@ -1,3 +1,4 @@
+import os
 import re
 import time
 import struct
@@ -16,8 +17,9 @@ class Mesh:
         self.triangles = []
         if self.load_text_mesh(filename) or self.load_binary_mesh(filename):
             self.bounding_box()
-            self.translate(np.zeros(3))  # translates the piece to the origin
             self.resort_triangles()  # Only for calculation
+            self.name = os.path.basename(filename)
+            self.color = tuple(np.random.rand(3))
 
     def load_binary_mesh(self, filename):
         try:

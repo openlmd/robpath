@@ -8,11 +8,20 @@ from planning import Planning
 class RobPath():
     def __init__(self):
         self.mesh = None
+        self.meshes = []
         self.planning = Planning()
         self.base_frame = np.eye(4)
 
     def load_mesh(self, filename):
         self.mesh = Mesh(filename)
+        #self.mesh.translate(np.zeros(3))  # translates the piece to the origin
+        self.meshes.append(self.mesh)  # TODO: implement meshes management
+
+    def select_mesh(self, name):
+        for mesh in self.meshes:
+            if mesh.name == name:
+                self.mesh = mesh
+                return name
 
     def translate_mesh(self, position):
         self.mesh.translate(position)
