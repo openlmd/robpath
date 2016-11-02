@@ -5,23 +5,13 @@ from mesh import Mesh
 from planning import Planning
 
 
-class RobPath():
-    def __init__(self):
-        self.mesh = None
-        self.meshes = []
-        self.planning = Planning()
-        self.base_frame = np.eye(4)
-
-    def load_mesh(self, filename):
+class Part():
+    def __init__(self, filename):
         self.mesh = Mesh(filename)
-        #self.mesh.translate(np.zeros(3))  # translates the piece to the origin
-        self.meshes.append(self.mesh)  # TODO: implement meshes management
-
-    def select_mesh(self, name):
-        for mesh in self.meshes:
-            if mesh.name == name:
-                self.mesh = mesh
-                return name
+        # Set parameters
+        self.set_process(8, 1000, 0)
+        self.set_track(0.7, 2.5, 0.45)
+        self.set_powder(20, 15, 5)
 
     def translate_mesh(self, position):
         self.mesh.translate(position)
@@ -29,27 +19,55 @@ class RobPath():
     def resize_mesh(self, size):
         self.mesh.scale(size / self.mesh.size)
 
-    def set_track(self, height, width, overlap):
-        self.track_height = height
-        self.track_width = width
-        self.track_overlap = overlap
-        self.track_distance = (1 - overlap) * width
+    def transform_mesh(self, mesh):
+        return mesh
 
     def set_process(self, speed, power, focus):
         self.speed = speed
         self.power = power
         self.focus = focus
 
+    def get_process(self):
+        return self.speed, self.power, self.focus
+
+    def set_track(self, height, width, overlap):
+        self.track_height = height
+        self.track_width = width
+        self.track_overlap = overlap
+        self.track_distance = (1 - overlap) * width
+
+    def get_track(self):
+        return self.track_height, self.track_width, self.track_overlap
+
     def set_powder(self, carrier, stirrer, turntable):
         self.carrier = carrier
         self.stirrer = stirrer
         self.turntable = turntable
 
+    def get_powder(self):
+        return self.carrier, self.stirrer, self.turntable
+
+
+class RobPath():
+    def __init__(self):
+        self.part = None
+        self.parts = []
+        self.planning = Planning()
+        self.base_frame = np.eye(4)
+
+    def load_mesh(self, filename):
+        self.part = Part(filename)
+        #self.mesh.translate(np.zeros(3))  # translates the piece to the origin
+        self.parts.append(self.part)  # TODO: implement meshes management
+
+    def select_part(self, name):
+        for part in self.parts:
+            if part.mesh.name == name:
+                self.part = part
+                return name
+
     def set_base_frame(self, position, orientation):
         self.base_frame = calc.quatpose_to_matrix(position, orientation)
-
-    def transform_mesh(self, mesh):
-        return mesh
 
     def transform_path(self, path):
         tpath = []
@@ -65,22 +83,22 @@ class RobPath():
         self.path = []
         self.slices = []
         self.pair = False
-        self.levels = self.mesh.get_zlevels(self.track_height)
+        self.levels = self.part.mesh.get_zlevels(self.part.track_height)
         return self.levels
 
     def update_process(self, filled=True, contour=False):
         tool_path = []
-        slice = self.mesh.get_slice(self.levels[self.k])
+        slice = self.part.mesh.get_slice(self.levels[self.k])
         if slice is not None:
             self.slices.append(slice)
             if filled:
                 tool_path = self.planning.get_path_from_slices(
-                    [slice], self.track_distance, self.pair, focus=self.focus)
+                    [slice], self.part.track_distance, self.pair, focus=self.part.focus)
                 self.pair = not self.pair
                 self.path.extend(tool_path)
             if contour:
                 tool_path = self.planning.get_path_from_slices(
-                    [slice], focus=self.focus)
+                    [slice], focus=self.part.focus)
                 self.path.extend(tool_path)
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)
@@ -101,8 +119,8 @@ if __name__ == "__main__":
 
     robpath = RobPath()
     robpath.load_mesh(filename)
-    robpath.set_track(0.5, 2.5, 0.4)
-    robpath.set_process(8, 1000, 0.0)
+    robpath.part.set_track(0.5, 2.5, 0.4)
+    robpath.part.set_process(8, 1000, 0.0)
     levels = robpath.init_process()
     for k, level in enumerate(levels):
         robpath.update_process(filled=True, contour=True)
