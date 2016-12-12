@@ -7,22 +7,23 @@ class Rapid():
         self.user = 'anonymous'
         self.password = 'anonymous@'
 
-        # Powder conditions
-        self.carrier_gas = 3
-        self.stirrer = 20
-        self.turntable = 20
-
-        self.power = 1200 # define by layer
-        self.track_speed = 8
-
-        self.speed = 'vl' # use speeddata v6
-        self.zone = 'z0'
+        self.set_process(8, 1200)
+        self.set_powder(3, 20, 20)
 
         self.travel_speed = 'v50'
         self.travel_zone = 'z0'
 
         self.tool = [[215.7, -22.4, 473.8], [0.50, 0.0, -0.8660254, 0.0]] # Tool pose
         self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
+
+    def set_process(self, speed, power):
+        self.speed = speed
+        self.power = power
+
+    def set_powder(self, carrier, stirrer, turntable):
+        self.carrier = carrier
+        self.stirrer = stirrer
+        self.turntable = turntable
 
     def path2rapid(self, path):
         RAPID_TEMPLATE  = 'MODULE Etna\n'
@@ -87,12 +88,12 @@ class Rapid():
             p, q, process = path[k]
             if process:
                 #moves = '\n'.join([moves, '    Set doLDLStartST;'])
-                #moves = '\n'.join([moves, '    MoveL T%i,%s,%s,toolEtna\WObj:=wobjEtna;' %(k, self.speed, self.zone)])
+                #moves = '\n'.join([moves, '    MoveL T%i,vl,z0,toolEtna\WObj:=wobjEtna;' %(k)])
                 if k < len(path)-1 and path[k+1][2]:
                     # If the track continues in the next point. Don't OFF the laser.
-                    moves = '\n'.join([moves, '    TriggL T%i,%s,laserON,%s,toolEtna\WObj:=wobjEtna;' %(k, self.speed, self.zone)])
+                    moves = '\n'.join([moves, '    TriggL T%i,vl,laserON,z0,toolEtna\WObj:=wobjEtna;' % (k)])
                 else:
-                    moves = '\n'.join([moves, '    TriggL T%i,%s,laserOFF,%s,toolEtna\WObj:=wobjEtna;' %(k, self.speed, self.zone)])
+                    moves = '\n'.join([moves, '    TriggL T%i,vl,laserOFF,z0,toolEtna\WObj:=wobjEtna;' % (k)])
             else:
                 #moves = '\n'.join([moves, '    Reset doLDLStartST;'])
                 #moves = '\n'.join([moves, '    MoveL T%i,%s,%s,toolEtna\WObj:=wobjEtna;' %(k, self.travel_speed, self.travel_zone)])
@@ -104,10 +105,10 @@ class Rapid():
 
         return RAPID_TEMPLATE %{'tool': tool,
                                 'wobj': wobj,
-                                'speed': self.track_speed,
+                                'speed': self.speed,
                                 'targets': targets,
                                 'moves': moves,
-                                'carrier': self.carrier_gas,
+                                'carrier': self.carrier,
                                 'stirrer': self.stirrer,
                                 'turntable': self.turntable,
                                 'power': self.power}

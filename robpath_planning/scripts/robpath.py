@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import numpy as np
 os.environ['QT_API'] = 'pyqt'
 os.environ['ETS_TOOLKIT'] = 'qt4'
 
@@ -7,7 +8,7 @@ os.environ['ETS_TOOLKIT'] = 'qt4'
 # we need to import QtGui and QtCore from pyface.qt
 from pyface.qt import QtGui, QtCore
 
-#from mayavi import mlab
+# from mayavi import mlab
 from traits.api import HasTraits, Instance, on_trait_change
 from traitsui.api import View, Item
 from mayavi.core.ui.api import MlabSceneModel, SceneEditor
@@ -16,8 +17,7 @@ from tvtk.pyface.api import Scene
 #from PyQt4 import QtGui, QtCore, uic
 from PyQt4 import uic
 
-import numpy as np
-
+from planning.rapid import Rapid
 from planning.robpath import RobPath
 from planning.mlabplot import MPlot3D
 
@@ -67,8 +67,16 @@ class QMayavi(QtGui.QWidget):
         self.drawWorkingArea()
         self.mlab.draw_mesh(mesh)
 
-    def drawPath(self, path):
-        self.mlab.draw_path(path)
+    def drawMeshes(self, meshes, selected=None):
+        self.drawWorkingArea()
+        for mesh in meshes:
+            if selected is not None and selected == mesh.name:
+                self.mlab.draw_mesh(mesh, color=(1, 0, 0))
+            else:
+                self.mlab.draw_mesh(mesh, color=mesh.color)
+
+    def drawPath(self, path, color=(1, 0, 0)):
+        self.mlab.draw_path(path, color)
 
     def drawSlice(self, slices, path):
         self.mlab.draw_slice(slices[-1])
@@ -87,6 +95,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.plot.drawWorkingArea()
 
         self.btnLoadMesh.clicked.connect(self.btnLoadMeshClicked)
+        self.btnSelectMesh.activated.connect(self.btnSelectMeshClicked)
         self.btnProcessMesh.clicked.connect(self.btnProcessMeshClicked)
         self.btnSaveRapid.clicked.connect(self.btnSaveRapidClicked)
 
@@ -100,25 +109,56 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
+        self.dirname = path
+        self.selected = None
         self.processing = False
         self.timer = QtCore.QTimer(self.plot)
-        self.timer.timeout.connect(self.updateProcess)
+        self.timer.timeout.connect(self.updateProcessing)
 
         self.robpath = RobPath()
+        self.rapid = Rapid()
+
+    def blockSignals(self, value):
+        self.sbPositionX.blockSignals(value)
+        self.sbPositionY.blockSignals(value)
+        self.sbPositionZ.blockSignals(value)
+        self.sbSizeX.blockSignals(value)
+        self.sbSizeY.blockSignals(value)
+        self.sbSizeZ.blockSignals(value)
 
     def changePosition(self):
         x = self.sbPositionX.value()
         y = self.sbPositionY.value()
         z = self.sbPositionZ.value()
-        self.robpath.translate_mesh(np.float32([x, y, z]))
-        self.plot.drawMesh(self.robpath.mesh)
+        self.robpath.part.translate_mesh(np.float32([x, y, z]))
+        self.plot.drawMesh(self.robpath.part.mesh)
 
     def changeSize(self):
         sx = self.sbSizeX.value() + 0.001
         sy = self.sbSizeY.value() + 0.001
         sz = self.sbSizeZ.value() + 0.001
-        self.robpath.resize_mesh(np.float32([sx, sy, sz]))
+        self.robpath.part.resize_mesh(np.float32([sx, sy, sz]))
         self.changePosition()
+
+    def changeTrack(self):
+        height = self.sbHeight.value() + 0.00001
+        width = self.sbWidth.value() + 0.00001
+        overlap = 0.01 * self.sbOverlap.value()
+        self.robpath.part.set_track(height, width, overlap)
+
+    def changeProcess(self):
+        speed = self.sbSpeed.value()
+        power = self.sbPower.value()
+        focus = self.sbFocus.value()
+        self.robpath.part.set_process(speed, power, focus)
+        self.rapid.set_process(speed, power)
+
+    def changePowder(self):
+        carrier = self.sbCarrier.value()
+        stirrer = self.sbStirrer.value()
+        turntable = self.sbTurntable.value()
+        self.robpath.part.set_powder(carrier, stirrer, turntable)
+        self.rapid.set_powder(carrier, stirrer, turntable)
 
     def updatePosition(self, position):
         x, y, z = position
@@ -132,12 +172,64 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeY.setValue(sy)
         self.sbSizeZ.setValue(sz)
 
-    def updateProcess(self):
+    def updateTrack(self, (height, width, overlap)):
+        self.sbHeight.setValue(height)
+        self.sbWidth.setValue(width)
+        self.sbOverlap.setValue(overlap)
+
+    def updateProcess(self, (speed, power, focus)):
+        self.sbSpeed.setValue(speed)
+        self.sbPower.setValue(power)
+        self.sbFocus.setValue(focus)
+
+    def updatePowder(self, (carrier, stirrer, turntable)):
+        self.sbCarrier.setValue(carrier)
+        self.sbStirrer.setValue(stirrer)
+        self.sbTurntable.setValue(turntable)
+
+    def btnLoadMeshClicked(self):
+        try:
+            filename = QtGui.QFileDialog.getOpenFileName(
+                self.plot, 'Open file', self.dirname, 'Mesh Files (*.stl)')
+            if filename:
+                name = os.path.basename(filename)
+                if name not in [part.mesh.name for part in self.robpath.parts]:
+                    self.name = name
+                    self.dirname = os.path.dirname(filename)
+                    self.setWindowTitle('Mesh Viewer: %s' % filename)
+                    self.robpath.load_mesh(filename)
+                    self.btnSelectMesh.addItems([self.name])
+                    self.updateMeshData(self.name)
+                    self.btnProcessMesh.setEnabled(True)
+                    self.btnProcessContours.setEnabled(True)
+        except:
+            pass
+        #self.plot.drawMesh(self.robpath.part.mesh)
+        # TOOD: Rename robpath.parts to robpath.parts
+        self.plot.drawMeshes([part.mesh for part in self.robpath.parts], self.name)
+
+    def updateMeshData(self, name):
+        self.robpath.select_part(name)
+        self.blockSignals(True)
+        self.updatePosition(self.robpath.part.mesh.position)
+        self.updateSize(self.robpath.part.mesh.size)
+        self.updateTrack(self.robpath.part.get_track())
+        self.updateProcess(self.robpath.part.get_process())
+        self.updatePowder(self.robpath.part.get_powder())
+        self.blockSignals(False)
+
+    def btnSelectMeshClicked(self):
+        self.name = self.btnSelectMesh.currentText()
+        self.updateMeshData(self.name)
+        self.plot.drawMeshes(
+            [part.mesh for part in self.robpath.parts], selected=self.name)
+
+    def updateProcessing(self):
         if self.robpath.k < len(self.robpath.levels):
             self.robpath.update_process(filled=self.chbFilled.isChecked(),
                                         contour=self.chbContour.isChecked())
             #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
-            self.plot.drawPath(self.robpath.path)
+            self.plot.drawPath(self.robpath.path, self.robpath.part.mesh.color)
             self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
             self.btnSaveRapid.setEnabled(False)
         else:
@@ -145,68 +237,28 @@ class RobPathUI(QtGui.QMainWindow):
             self.timer.stop()
             self.btnSaveRapid.setEnabled(True)
 
-    def blockSignals(self, value):
-        self.sbPositionX.blockSignals(value)
-        self.sbPositionY.blockSignals(value)
-        self.sbPositionZ.blockSignals(value)
-        self.sbSizeX.blockSignals(value)
-        self.sbSizeY.blockSignals(value)
-        self.sbSizeZ.blockSignals(value)
-
-    def btnLoadMeshClicked(self):
-        self.blockSignals(True)
-        try:
-            filename = QtGui.QFileDialog.getOpenFileName(
-                self.plot, 'Open file', './', 'Mesh Files (*.stl)')
-            print filename
-            self.setWindowTitle('Mesh Viewer: %s' % filename)
-            self.robpath.load_mesh(filename)
-            # -----
-            # TODO: Change bpoints.
-            self.updatePosition(self.robpath.mesh.bpoint1)
-            self.updateSize(self.robpath.mesh.bpoint2 - self.robpath.mesh.bpoint1)
-            self.lblInfo.setText('Info:\n')
-            # -----
-            self.plot.drawMesh(self.robpath.mesh)
-            self.btnProcessMesh.setEnabled(True)
-            self.btnProcessContours.setEnabled(True)
-        except:
-            pass
-        self.blockSignals(False)
-        self.plot.drawMesh(self.robpath.mesh)
-
-    def update_parameters(self):
-        height = self.sbHeight.value() + 0.00001
-        width = self.sbWidth.value() + 0.00001
-        overlap = 0.01 * self.sbOverlap.value()
-        self.robpath.set_track(height, width, overlap)
-
-        speed = self.sbSpeed.value()
-        power = self.sbPower.value()
-        self.robpath.set_speed(speed)
-        self.robpath.set_power(power)
-
-        carrier_gas = self.sbCarrier.value()
-        stirrer = self.sbStirrer.value()
-        turntable = self.sbTurntable.value()
-        self.robpath.set_powder(carrier_gas, stirrer, turntable)
-
     def btnProcessMeshClicked(self):
         if self.processing:
             self.timer.stop()
             self.processing = False
         else:
             self.plot.drawWorkingArea()
-
-            self.update_parameters()
+            self.changeTrack()
+            self.changeProcess()
+            self.changePowder()
             self.robpath.init_process()
-
             self.processing = True
             self.timer.start(100)
 
     def btnSaveRapidClicked(self):
-        self.robpath.save_rapid()
-        QtGui.QMessageBox.information(self, "Export information", "Routine exported to the robot.")
+        filename = 'etna.mod'
+        directory = 'ETNA'
+        routine = self.rapid.path2rapid(self.path)
+        self.rapid.save_file(filename, routine)
+        self.rapid.upload_file(filename, directory)
+        print routine
+        QtGui.QMessageBox.information(
+            self, "Export information", "Routine exported to the robot.")
 
     def btnQuitClicked(self):
         QtCore.QCoreApplication.instance().quit()

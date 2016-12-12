@@ -162,9 +162,9 @@ class MPlot3D():
         frames = np.array(frames)
         self.draw_tools(points, frames)
 
-    def _get_triangular_mesh(self, mesh):
+    def _get_triangular_mesh(self, triangles):
         x, y, z = [], [], []
-        for tri in mesh.triangles:
+        for tri in triangles:
             for pnt in tri:
                 x.append(pnt[0])
                 y.append(pnt[1])
@@ -173,7 +173,7 @@ class MPlot3D():
         return x, y, z, triangles
 
     def draw_mesh(self, mesh, color=WHITE, opacity=0.7):
-        x, y, z, triangles = self._get_triangular_mesh(mesh)
+        x, y, z, triangles = self._get_triangular_mesh(mesh.triangles)
         mlab.triangular_mesh(x, y, z, triangles, color=color,
                              opacity=opacity, representation='surface')
         #mlab.triangular_mesh(x, y, z, triangles, colormap='bone',
@@ -181,9 +181,8 @@ class MPlot3D():
         mlab.triangular_mesh(x, y, z, triangles, color=(0, 0, 0),
                              line_width=1.0, representation='wireframe')
         #mlab.outline()
-        #mlab.axes()
 
-    def draw_path(self, path):
+    def draw_path(self, path, color=(0.7, 0.5, 0.3)):
         points, vectors, processes = [], [], []
         for k in range(len(path)-1):
             points.append(path[k][0])
@@ -194,13 +193,13 @@ class MPlot3D():
         pnts, vctrs = points[processes], vectors[processes]
         mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
                       vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
-                      color=(0.7, 0.5, 0.3), mode='2ddash',
+                      color=color, mode='2ddash',
                       scale_factor=1, line_width=5.0)
         pnts = points[np.bitwise_not(processes)]
         vctrs = vectors[np.bitwise_not(processes)]
         mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
                       vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
-                      color=(0.2, 0.4, 0.6), mode='2ddash',
+                      color=(0.6, 0.6, 0.6), mode='2ddash',
                       scale_factor=1, line_width=2.0)
 
     def draw_point_cloud(self, points3d):
@@ -216,6 +215,7 @@ class MPlot3D():
         z = np.zeros(x.shape)
         mlab.surf(x, y, z, color=color, line_width=1.0,
                   representation='wireframe', warp_scale=self.scale)
+        mlab.axes()
 
     def outline(self):
         mlab.outline()
@@ -236,8 +236,6 @@ if __name__ == '__main__':
                         [0, 1, 0],
                         [0, 0, 1]])
     point = np.float32([0, 0, 0])
-
-    import calculate as calc
 
     arrow = np.float32([[0, 0, 0], [100, 0, 0]])
 
