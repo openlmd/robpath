@@ -1,5 +1,6 @@
 import numpy as np
 import calculate as calc
+import json
 
 from mesh import Mesh
 from planning import Planning
@@ -65,6 +66,16 @@ class RobPath():
             if part.mesh.name == name:
                 self.part = part
                 return name
+
+    def load_base_frame(self, filename='../../data/base_frame.json'):
+        try:
+            with open(filename) as data_file:
+                frame_data = json.load(data_file)
+            self.set_base_frame(frame_data['frame']['t'], frame_data['frame']['quat'])
+        except IOError as error:
+            print error
+        except:
+            print 'Unexpected load_base_frame error'
 
     def set_base_frame(self, position, orientation):
         self.base_frame = calc.quatpose_to_matrix(position, orientation)

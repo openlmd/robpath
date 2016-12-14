@@ -60,6 +60,7 @@ class QtPart(QtGui.QWidget):
             'Mesh Files (*.stl)')[0]
         self.setWindowTitle(filename)
         self.robpath.load_mesh(filename)
+        self.dirname = os.path.dirname(filename)
         self.updateParameters()
 
         self.updatePosition(self.robpath.part.mesh.position)
@@ -129,6 +130,9 @@ class QtPart(QtGui.QWidget):
             self.processing = True
 
     def btnAcceptPathClicked(self):
+        self.robpath.load_base_frame(self.dirname + '/base_frame.json')
+        print self.dirname + '/base_frame.json'
+        self.robpath.path = self.robpath.transform_path(self.robpath.path)
         self.accepted.emit(self.robpath.path)
 
     def changeLayers(self):
