@@ -63,11 +63,11 @@ class QtPart(QtGui.QWidget):
         self.dirname = os.path.dirname(filename)
         self.updateParameters()
 
-        self.updatePosition(self.robpath.part.mesh.position)
-        self.updateSize(self.robpath.part.mesh.size)
+        self.updatePosition(self.robpath.part.position)
+        self.updateSize(self.robpath.part.size)
 
         self.part_markers = PartMarkers()
-        self.part_markers.set_mesh(self.robpath.part.mesh)
+        self.part_markers.set_mesh(self.robpath.part)
         self.pub_marker_array.publish(self.part_markers.marker_array)
 
         self.updateLayers()
@@ -166,11 +166,11 @@ class QtPart(QtGui.QWidget):
 
     def updatePart(self, position=None, size=None):
         if position is not None:
-            self.robpath.part.translate_mesh(np.float32(position))
-            self.part_markers.set_mesh(self.robpath.part.mesh)
+            self.robpath.part.translate(np.float32(position))
+            self.part_markers.set_mesh(self.robpath.part)
         if size is not None:
             self.robpath.part.resize_mesh(np.float32(size))
-            self.part_markers.set_mesh(self.robpath.part.mesh)
+            self.part_markers.set_mesh(self.robpath.part)
         self.pub_marker_array.publish(self.part_markers.marker_array)
 
     def blockSignals(self, value):
