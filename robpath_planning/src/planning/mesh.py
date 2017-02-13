@@ -10,9 +10,10 @@ import polyline as poly
 
 class Mesh:
     def __init__(self, filename):
+        self.origin = np.array([.0, .0, .0])
         # Bounding box
-        self.position = np.array([0.0, 0.0, 0.0])
-        self.size = np.array([0.0, 0.0, 0.0])
+        self.position = np.array([.0, .0, .0])
+        self.size = np.array([.0, .0, .0])
         # Mesh loading routine
         self.triangles = []
         if self.load_text_mesh(filename) or self.load_binary_mesh(filename):
@@ -85,9 +86,10 @@ class Mesh:
         self.size = bpnt2 - bpnt1
 
     def translate(self, point):
-        trans = point - self.position
+        trans = point - self.origin
         for k, tri in enumerate(self.triangles):
             self.triangles[k] = tri + trans
+        self.origin = point
         self.bounding_box()
         self.resort_triangles()
 
