@@ -112,8 +112,9 @@ class Mesh:
         i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2
         return np.arange(i_min, i_max + v_dist, v_dist)
 
-    def get_zlevels(self, zdist):
-        zmin, zmax = self.position[2], (self.position + self.size)[2]
+    def get_zlevels(self, zdist, zmin=None, zmax=None):
+        if zmin is None and zmax is None:
+            zmin, zmax = self.position[2], (self.position + self.size)[2]
         print 'Zmin, Zmax:', zmin, zmax
         n_vals = np.round((zmax - zmin) / zdist)
         i_min = ((zmax + zmin) - (n_vals * zdist)) / 2

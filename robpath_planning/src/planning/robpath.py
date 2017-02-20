@@ -14,6 +14,7 @@ class Part(Mesh):
         self.set_process(8, 1000, 0)
         self.set_track(0.7, 2.5, 0.45)
         self.set_powder(20, 15, 5)
+        self.filling = 0.0
 
     def resize_mesh(self, size):
         self.scale(size / self.size)
@@ -89,37 +90,81 @@ class RobPath():
     def set_base_frame(self, position, orientation):
         self.base_frame = calc.quatpose_to_matrix(position, orientation)
 
-    def transform_path(self, path):
+    def transform_path(self, path, r=None):
         tpath = []
         for position, orientation, process in path:
             matrix = calc.quatpose_to_matrix(position, orientation)
-            tmatrix = np.dot(self.base_frame, matrix)
+            if r is None:
+                tmatrix = np.dot(self.base_frame, matrix)
+            else:
+                base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
+                tmatrix = np.dot(base_matrix, matrix)
             trans, quat = calc.matrix_to_quatpose(tmatrix)
             tpath.append((trans, quat, process))
         return tpath
+
+    def transform_slice(self, slice, r):
+        tslice = []
+        tslices = []
+        for s in slice:
+            for position in s:
+                matrix = calc.rpypose_to_matrix(position, [0,0,0])
+                base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
+                tmatrix = np.dot(base_matrix, matrix)
+                trans, quat = calc.matrix_to_quatpose(tmatrix)
+                tslice.append([trans[0],trans[1],trans[2]])
+            tslices.append(tslice)
+        nslice = np.array(tslices)
+        return nslice
 
     def init_process(self):
         self.k = 0
         self.path = []
         self.slices = []
         self.pair = False
-        self.levels = self.part.get_zlevels(self.part.track_height)
+        if self.name is None and len(self.parts) > 0:
+            zmin, zmax = self.parts[0].position[2], (self.parts[0].position + self.parts[0].size)[2]
+            for part in self.parts:
+                if part.position[2] < zmin:
+                    zmin = part.position[2]
+                if (part.position + part.size)[2] > zmax:
+                    zmax = (part.position + part.size)[2]
+            self.levels = self.parts[0].get_zlevels(self.parts[0].track_height, zmin=zmin, zmax=zmax)
+        else:
+            self.levels = self.part.get_zlevels(self.part.track_height)
         return self.levels
 
     def update_process(self, filled=True, contour=False):
         tool_path = []
-        slice = self.part.get_slice(self.levels[self.k])
-        if slice is not None:
-            self.slices.append(slice)
-            if filled:
-                tool_path = self.planning.get_path_from_slices(
-                    [slice], self.part.track_distance, self.pair, focus=self.part.focus)
-                self.pair = not self.pair
-                self.path.extend(tool_path)
-            if contour:
-                tool_path = self.planning.get_path_from_slices(
-                    [slice], focus=self.part.focus)
-                self.path.extend(tool_path)
+        slices = []
+        degrees = []
+        if self.name is None:
+            for part in self.parts:
+                slices.append(part.get_slice(self.levels[self.k]))
+                degrees.append(part.filling)
+        else:
+            slices.append(self.part.get_slice(self.levels[self.k]))
+            degrees.append(self.part.filling)
+        for n, slice in enumerate(slices):
+            if slice is not None:
+                self.slices.append(slice)
+                if filled:
+                    if degrees[n] == 0.0:
+                        tool_path = self.planning.get_path_from_slices(
+                            [slice], self.part.track_distance, self.pair, focus=self.part.focus)
+                        self.pair = not self.pair
+                        self.path.extend(tool_path)
+                    else:
+                        tslice = self.transform_slice(slice, degrees[n])
+                        tool_path = self.planning.get_path_from_slices(
+                            [tslice], self.part.track_distance, self.pair, focus=self.part.focus)
+                        self.pair = not self.pair
+                        tool_path = self.transform_path(tool_path, -degrees[n])
+                        self.path.extend(tool_path)
+                if contour:
+                    tool_path = self.planning.get_path_from_slices(
+                        [slice], focus=self.part.focus)
+                    self.path.extend(tool_path)
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)
         return tool_path

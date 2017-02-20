@@ -107,6 +107,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeX.valueChanged.connect(self.changeSize)
         self.sbSizeY.valueChanged.connect(self.changeSize)
         self.sbSizeZ.valueChanged.connect(self.changeSize)
+        self.sbFilling.valueChanged.connect(self.changeFilling)
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
@@ -162,6 +163,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.part.set_powder(carrier, stirrer, turntable)
         self.rapid.set_powder(carrier, stirrer, turntable)
 
+    def changeFilling(self):
+        self.robpath.part.filling = self.sbFilling.value()
+
     def updatePosition(self, position):
         x, y, z = position
         self.sbPositionX.setValue(x)
@@ -189,6 +193,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbStirrer.setValue(stirrer)
         self.sbTurntable.setValue(turntable)
 
+    def updateFilling(self, filling):
+        self.sbFilling.setValue(filling)
+
     def btnLoadMeshClicked(self):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
@@ -201,6 +208,7 @@ class RobPathUI(QtGui.QMainWindow):
                 self.updateMeshData(self.robpath.name)
                 self.btnProcessMesh.setEnabled(True)
                 self.btnProcessContours.setEnabled(True)
+                self.robpath.part.filling = self.sbFilling.value()
         except:
             pass
         #self.plot.drawMesh(self.robpath.part)
@@ -214,6 +222,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.updateTrack(self.robpath.part.get_track())
         self.updateProcess(self.robpath.part.get_process())
         self.updatePowder(self.robpath.part.get_powder())
+        self.updateFilling(self.robpath.part.filling)
         self.blockSignals(False)
 
     def btnSelectAllClicked(self):
@@ -255,7 +264,7 @@ class RobPathUI(QtGui.QMainWindow):
     def btnSaveRapidClicked(self):
         filename = 'etna.mod'
         directory = 'ETNA'
-        routine = self.rapid.path2rapid(self.path)
+        routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
         self.rapid.upload_file(filename, directory)
         print routine
