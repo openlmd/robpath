@@ -184,8 +184,7 @@ class Rapid():
                 RAPID_TEMPLATE += line
         return RAPID_TEMPLATE
 
-    def path2rapid_beta(self, path):
-        module_name = 'Robpath'
+    def path2rapid_beta(self, path, module_name ='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
         feeder = 'gtv'

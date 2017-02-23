@@ -262,8 +262,8 @@ class RobPathUI(QtGui.QMainWindow):
             self.timer.start(100)
 
     def btnSaveRapidClicked(self):
-        filename = 'etna.mod'
-        directory = 'ETNA'
+        filename = 'robpath.mod'
+        directory = '../../AIMEN'
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
         self.rapid.upload_file(filename, directory)
