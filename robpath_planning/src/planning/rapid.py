@@ -1,5 +1,6 @@
 import ftplib
 import os
+import rospkg
 
 class Rapid():
     def __init__(self):
@@ -13,7 +14,7 @@ class Rapid():
         self.travel_speed = 'v50'
         self.travel_zone = 'z0'
 
-        self.tool = [[215.7, -22.4, 473.8], [0.50, 0.0, -0.8660254, 0.0]] # Tool pose
+        self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0.0, -0.70711, 0.0]] # Tool pose
         self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
 
     def set_process(self, speed, power):
@@ -173,10 +174,9 @@ class Rapid():
         return FEEDER_TEMPLATE
 
     def load_template(self):
-        if os.path.exists('../../templates'):
-            templante_name='../../templates/rapid.txt'
-        else:
-            templante_name='../templates/rapid.txt'
+        rospack = rospkg.RosPack()
+        templante_path = rospack.get_path('robpath_planning')
+        templante_name = templante_path + '/templates/rapid.txt'
         with open(templante_name) as file:
             lines = file.readlines()
             RAPID_TEMPLATE = ''
@@ -187,6 +187,7 @@ class Rapid():
     def path2rapid_beta(self, path, module_name ='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
+        #TODO: Get powder and laser parameters
         feeder = 'gtv'
         laser = 'trudisk'
 
@@ -206,15 +207,16 @@ class Rapid():
         targets = ''
         for k in range(len(path)):
             p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget T%i:=[[%f,%f,%f],[%f,%f,%f,%f],[-1,0,-1,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
+            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
         # Movement definition
         moves = ''
+        #TODO: Implementar unha unica instruccion con 2 triggers e moveJ entre puntos sin laser
         for k in range(len(path)):
             p, q, process = path[k]
             if process:
-                moves = '\n'.join([moves, '    TriggL T%i,vl,laserON%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    TriggL Trobpath%i,vRobpath,laserON%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
             else:
-                moves = '\n'.join([moves, '    TriggL T%i,vl,laserOFF%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    TriggL Trobpath%i,vRobpath,laserOFF%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
         moves = '\n'.join([moves, '\n'])
 
         tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
@@ -250,7 +252,7 @@ class Rapid():
             print ftp.retrlines('LIST')
             ftp.quit()
         except IOError:
-            print 'File transfered to the robot.'
+            print 'Upload file to robot error.'
 
 
 if __name__ == '__main__':

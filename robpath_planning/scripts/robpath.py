@@ -264,6 +264,9 @@ class RobPathUI(QtGui.QMainWindow):
     def btnSaveRapidClicked(self):
         filename = 'robpath.mod'
         directory = '../../AIMEN'
+        if os.path.exists(self.dirname + '/base_frame.json'):
+            self.robpath.load_base_frame(self.dirname + '/base_frame.json')
+        self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
         self.rapid.upload_file(filename, directory)

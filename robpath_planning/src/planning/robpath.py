@@ -100,7 +100,7 @@ class RobPath():
                 base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
                 tmatrix = np.dot(base_matrix, matrix)
             trans, quat = calc.matrix_to_quatpose(tmatrix)
-            tpath.append((trans, quat, process))
+            tpath.append((trans, orientation, process))
         return tpath
 
     def transform_slice(self, slice, r):

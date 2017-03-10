@@ -130,8 +130,9 @@ class QtPart(QtGui.QWidget):
             self.processing = True
 
     def btnAcceptPathClicked(self):
-        self.robpath.load_base_frame(self.dirname + '/base_frame.json')
-        print self.dirname + '/base_frame.json'
+        if os.path.exists(self.dirname + '/base_frame.json'):
+            self.robpath.load_base_frame(self.dirname + '/base_frame.json')
+            print self.dirname + '/base_frame.json'
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         self.accepted.emit(self.robpath.path)
 
