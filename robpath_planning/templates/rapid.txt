@@ -1,0 +1,39 @@
+MODULE %(module_name)s
+
+    PERS tooldata %(tool_name)s:=%(tool)s;
+    PERS wobjdata %(wobj_name)s:=%(wobj)s;
+
+    VAR triggdata laserON%(module_name)s;
+    VAR triggdata laserOFF%(module_name)s;
+
+    CONST speeddata vRobpath:=[%(speed)i,500,5000,1000];
+
+    %(targets)s
+
+PROC claddingRobpath()
+    %(moves)s
+ENDPROC
+
+PROC main%(module_name)s()
+
+    %(laser_conf)s
+    TriggIO laserON%(module_name)s, 0\DOp:=%(laser_out)s, 1;
+    TriggIO laserOFF%(module_name)s, 0\DOp:=%(laser_out)s, 0;
+
+    %(feeder_conf)s
+
+    ConfL \Off;
+
+    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+
+    claddingRobpath;
+
+    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+
+    %(feeder_stop)s
+
+    %(laser_stop)s
+
+ENDPROC
+
+ENDMODULE

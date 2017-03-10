@@ -1,3 +1,5 @@
+import os
+import json
 import numpy as np
 import calculate as calc
 
@@ -5,19 +7,17 @@ from mesh import Mesh
 from planning import Planning
 
 
-class Part():
+class Part(Mesh):
     def __init__(self, filename):
-        self.mesh = Mesh(filename)
+        Mesh.__init__(self, filename)
         # Set parameters
         self.set_process(8, 1000, 0)
         self.set_track(0.7, 2.5, 0.45)
         self.set_powder(20, 15, 5)
-
-    def translate_mesh(self, position):
-        self.mesh.translate(position)
+        self.filling = 0.0
 
     def resize_mesh(self, size):
-        self.mesh.scale(size / self.mesh.size)
+        self.scale(size / self.size)
 
     def transform_mesh(self, mesh):
         return mesh
@@ -51,55 +51,120 @@ class Part():
 class RobPath():
     def __init__(self):
         self.part = None
+        self.name = None
         self.parts = []
         self.planning = Planning()
         self.base_frame = np.eye(4)
+        self.origin = np.array([.0, .0, .0])
 
     def load_mesh(self, filename):
         self.part = Part(filename)
-        #self.mesh.translate(np.zeros(3))  # translates the piece to the origin
-        self.parts.append(self.part)  # TODO: implement meshes management
+        self.part.name = str(len(self.parts)) + '_' + os.path.basename(filename)
+        self.name = self.part.name
+        self.parts.append(self.part)
 
     def select_part(self, name):
         for part in self.parts:
-            if part.mesh.name == name:
+            if part.name == name:
                 self.part = part
                 return name
+
+    def translate(self, position):
+        if self.name is None:
+            trans = position - self.origin
+            [part.translate(trans + part.origin) for part in self.parts]
+            self.origin = position
+        else:
+            self.part.translate(position)
+
+    def load_base_frame(self, filename='../../data/base_frame.json'):
+        try:
+            with open(filename) as data_file:
+                frame_data = json.load(data_file)
+            self.set_base_frame(frame_data['frame']['t'], frame_data['frame']['quat'])
+        except IOError as error:
+            print error
+        except:
+            print 'Unexpected load_base_frame error'
 
     def set_base_frame(self, position, orientation):
         self.base_frame = calc.quatpose_to_matrix(position, orientation)
 
-    def transform_path(self, path):
+    def transform_path(self, path, r=None):
         tpath = []
         for position, orientation, process in path:
             matrix = calc.quatpose_to_matrix(position, orientation)
-            tmatrix = np.dot(self.base_frame, matrix)
+            if r is None:
+                tmatrix = np.dot(self.base_frame, matrix)
+            else:
+                base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
+                tmatrix = np.dot(base_matrix, matrix)
             trans, quat = calc.matrix_to_quatpose(tmatrix)
-            tpath.append((trans, quat, process))
+            tpath.append((trans, orientation, process))
         return tpath
+
+    def transform_slice(self, slice, r):
+        tslice = []
+        tslices = []
+        for s in slice:
+            for position in s:
+                matrix = calc.rpypose_to_matrix(position, [0,0,0])
+                base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
+                tmatrix = np.dot(base_matrix, matrix)
+                trans, quat = calc.matrix_to_quatpose(tmatrix)
+                tslice.append([trans[0],trans[1],trans[2]])
+            tslices.append(tslice)
+        nslice = np.array(tslices)
+        return nslice
 
     def init_process(self):
         self.k = 0
         self.path = []
         self.slices = []
         self.pair = False
-        self.levels = self.part.mesh.get_zlevels(self.part.track_height)
+        if self.name is None and len(self.parts) > 0:
+            zmin, zmax = self.parts[0].position[2], (self.parts[0].position + self.parts[0].size)[2]
+            for part in self.parts:
+                if part.position[2] < zmin:
+                    zmin = part.position[2]
+                if (part.position + part.size)[2] > zmax:
+                    zmax = (part.position + part.size)[2]
+            self.levels = self.parts[0].get_zlevels(self.parts[0].track_height, zmin=zmin, zmax=zmax)
+        else:
+            self.levels = self.part.get_zlevels(self.part.track_height)
         return self.levels
 
     def update_process(self, filled=True, contour=False):
         tool_path = []
-        slice = self.part.mesh.get_slice(self.levels[self.k])
-        if slice is not None:
-            self.slices.append(slice)
-            if filled:
-                tool_path = self.planning.get_path_from_slices(
-                    [slice], self.part.track_distance, self.pair, focus=self.part.focus)
-                self.pair = not self.pair
-                self.path.extend(tool_path)
-            if contour:
-                tool_path = self.planning.get_path_from_slices(
-                    [slice], focus=self.part.focus)
-                self.path.extend(tool_path)
+        slices = []
+        degrees = []
+        if self.name is None:
+            for part in self.parts:
+                slices.append(part.get_slice(self.levels[self.k]))
+                degrees.append(part.filling)
+        else:
+            slices.append(self.part.get_slice(self.levels[self.k]))
+            degrees.append(self.part.filling)
+        for n, slice in enumerate(slices):
+            if slice is not None:
+                self.slices.append(slice)
+                if filled:
+                    if degrees[n] == 0.0:
+                        tool_path = self.planning.get_path_from_slices(
+                            [slice], self.part.track_distance, self.pair, focus=self.part.focus)
+                        self.pair = not self.pair
+                        self.path.extend(tool_path)
+                    else:
+                        tslice = self.transform_slice(slice, degrees[n])
+                        tool_path = self.planning.get_path_from_slices(
+                            [tslice], self.part.track_distance, self.pair, focus=self.part.focus)
+                        self.pair = not self.pair
+                        tool_path = self.transform_path(tool_path, -degrees[n])
+                        self.path.extend(tool_path)
+                if contour:
+                    tool_path = self.planning.get_path_from_slices(
+                        [slice], focus=self.part.focus)
+                    self.path.extend(tool_path)
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
@@ -126,7 +191,7 @@ if __name__ == "__main__":
         robpath.update_process(filled=True, contour=True)
 
     mplot3d = MPlot3D()
-    #mplot3d.draw_mesh(robpath.mesh)
+    #mplot3d.draw_mesh(robpath.part)
     #mplot3d.draw_slices(slices)
     mplot3d.draw_path(robpath.path)
     #mplot3d.draw_path_tools(_path)

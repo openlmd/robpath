@@ -70,7 +70,7 @@ class QMayavi(QtGui.QWidget):
     def drawMeshes(self, meshes, selected=None):
         self.drawWorkingArea()
         for mesh in meshes:
-            if selected is not None and selected == mesh.name:
+            if selected is None or selected == mesh.name:
                 self.mlab.draw_mesh(mesh, color=(1, 0, 0))
             else:
                 self.mlab.draw_mesh(mesh, color=mesh.color)
@@ -95,6 +95,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.plot.drawWorkingArea()
 
         self.btnLoadMesh.clicked.connect(self.btnLoadMeshClicked)
+        self.btnSelectAll.clicked.connect(self.btnSelectAllClicked)
         self.btnSelectMesh.activated.connect(self.btnSelectMeshClicked)
         self.btnProcessMesh.clicked.connect(self.btnProcessMeshClicked)
         self.btnSaveRapid.clicked.connect(self.btnSaveRapidClicked)
@@ -106,6 +107,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeX.valueChanged.connect(self.changeSize)
         self.sbSizeY.valueChanged.connect(self.changeSize)
         self.sbSizeZ.valueChanged.connect(self.changeSize)
+        self.sbFilling.valueChanged.connect(self.changeFilling)
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
@@ -130,8 +132,9 @@ class RobPathUI(QtGui.QMainWindow):
         x = self.sbPositionX.value()
         y = self.sbPositionY.value()
         z = self.sbPositionZ.value()
-        self.robpath.part.translate_mesh(np.float32([x, y, z]))
-        self.plot.drawMesh(self.robpath.part.mesh)
+        self.robpath.translate(np.float32([x, y, z]))
+        # self.plot.drawMesh(self.robpath.part)
+        self.plot.drawMeshes(self.robpath.parts, selected=self.robpath.name)
 
     def changeSize(self):
         sx = self.sbSizeX.value() + 0.001
@@ -160,6 +163,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.part.set_powder(carrier, stirrer, turntable)
         self.rapid.set_powder(carrier, stirrer, turntable)
 
+    def changeFilling(self):
+        self.robpath.part.filling = self.sbFilling.value()
+
     def updatePosition(self, position):
         x, y, z = position
         self.sbPositionX.setValue(x)
@@ -187,49 +193,54 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbStirrer.setValue(stirrer)
         self.sbTurntable.setValue(turntable)
 
+    def updateFilling(self, filling):
+        self.sbFilling.setValue(filling)
+
     def btnLoadMeshClicked(self):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
                 self.plot, 'Open file', self.dirname, 'Mesh Files (*.stl)')
             if filename:
-                name = os.path.basename(filename)
-                if name not in [part.mesh.name for part in self.robpath.parts]:
-                    self.name = name
-                    self.dirname = os.path.dirname(filename)
-                    self.setWindowTitle('Mesh Viewer: %s' % filename)
-                    self.robpath.load_mesh(filename)
-                    self.btnSelectMesh.addItems([self.name])
-                    self.updateMeshData(self.name)
-                    self.btnProcessMesh.setEnabled(True)
-                    self.btnProcessContours.setEnabled(True)
+                self.dirname = os.path.dirname(filename)
+                self.robpath.load_mesh(filename)
+                self.setWindowTitle('Mesh Viewer: %s' % filename)
+                self.btnSelectMesh.addItems([self.robpath.name])
+                self.updateMeshData(self.robpath.name)
+                self.btnProcessMesh.setEnabled(True)
+                self.btnProcessContours.setEnabled(True)
+                self.robpath.part.filling = self.sbFilling.value()
         except:
             pass
-        #self.plot.drawMesh(self.robpath.part.mesh)
-        # TOOD: Rename robpath.parts to robpath.parts
-        self.plot.drawMeshes([part.mesh for part in self.robpath.parts], self.name)
+        #self.plot.drawMesh(self.robpath.part)
+        self.plot.drawMeshes(self.robpath.parts, self.robpath.name)
 
     def updateMeshData(self, name):
         self.robpath.select_part(name)
         self.blockSignals(True)
-        self.updatePosition(self.robpath.part.mesh.position)
-        self.updateSize(self.robpath.part.mesh.size)
+        self.updatePosition(self.robpath.part.origin)
+        self.updateSize(self.robpath.part.size)
         self.updateTrack(self.robpath.part.get_track())
         self.updateProcess(self.robpath.part.get_process())
         self.updatePowder(self.robpath.part.get_powder())
+        self.updateFilling(self.robpath.part.filling)
         self.blockSignals(False)
 
+    def btnSelectAllClicked(self):
+        self.robpath.name = None
+        self.updatePosition(self.robpath.origin)
+        self.plot.drawMeshes(self.robpath.parts)
+
     def btnSelectMeshClicked(self):
-        self.name = self.btnSelectMesh.currentText()
-        self.updateMeshData(self.name)
-        self.plot.drawMeshes(
-            [part.mesh for part in self.robpath.parts], selected=self.name)
+        self.robpath.name = self.btnSelectMesh.currentText()
+        self.updateMeshData(self.robpath.name)
+        self.plot.drawMeshes(self.robpath.parts, selected=self.robpath.name)
 
     def updateProcessing(self):
         if self.robpath.k < len(self.robpath.levels):
             self.robpath.update_process(filled=self.chbFilled.isChecked(),
                                         contour=self.chbContour.isChecked())
             #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
-            self.plot.drawPath(self.robpath.path, self.robpath.part.mesh.color)
+            self.plot.drawPath(self.robpath.path, self.robpath.part.color)
             self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
             self.btnSaveRapid.setEnabled(False)
         else:
@@ -251,9 +262,12 @@ class RobPathUI(QtGui.QMainWindow):
             self.timer.start(100)
 
     def btnSaveRapidClicked(self):
-        filename = 'etna.mod'
-        directory = 'ETNA'
-        routine = self.rapid.path2rapid(self.path)
+        filename = 'robpath.mod'
+        directory = '../../AIMEN'
+        if os.path.exists(self.dirname + '/base_frame.json'):
+            self.robpath.load_base_frame(self.dirname + '/base_frame.json')
+        self.robpath.path = self.robpath.transform_path(self.robpath.path)
+        routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
         self.rapid.upload_file(filename, directory)
         print routine

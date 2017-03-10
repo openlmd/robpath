@@ -10,9 +10,10 @@ import polyline as poly
 
 class Mesh:
     def __init__(self, filename):
+        self.origin = np.array([.0, .0, .0])
         # Bounding box
-        self.position = np.array([0.0, 0.0, 0.0])
-        self.size = np.array([0.0, 0.0, 0.0])
+        self.position = np.array([.0, .0, .0])
+        self.size = np.array([.0, .0, .0])
         # Mesh loading routine
         self.triangles = []
         if self.load_text_mesh(filename) or self.load_binary_mesh(filename):
@@ -85,9 +86,10 @@ class Mesh:
         self.size = bpnt2 - bpnt1
 
     def translate(self, point):
-        trans = point - self.position
+        trans = point - self.origin
         for k, tri in enumerate(self.triangles):
             self.triangles[k] = tri + trans
+        self.origin = point
         self.bounding_box()
         self.resort_triangles()
 
@@ -110,8 +112,9 @@ class Mesh:
         i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2
         return np.arange(i_min, i_max + v_dist, v_dist)
 
-    def get_zlevels(self, zdist):
-        zmin, zmax = self.position[2], (self.position + self.size)[2]
+    def get_zlevels(self, zdist, zmin=None, zmax=None):
+        if zmin is None and zmax is None:
+            zmin, zmax = self.position[2], (self.position + self.size)[2]
         print 'Zmin, Zmax:', zmin, zmax
         n_vals = np.round((zmax - zmin) / zdist)
         i_min = ((zmax + zmin) - (n_vals * zdist)) / 2
