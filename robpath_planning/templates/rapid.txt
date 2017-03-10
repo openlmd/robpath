@@ -17,18 +17,18 @@ ENDPROC
 PROC main%(module_name)s()
 
     %(laser_conf)s
-    TriggIO laserON%(module_name)s, 0\DOp:=%(laser_out)s, 1;
+    TriggIO laserON%(module_name)s, 0 \Start \DOp:=%(laser_out)s, 1;
     TriggIO laserOFF%(module_name)s, 0\DOp:=%(laser_out)s, 0;
 
     %(feeder_conf)s
 
     ConfL \Off;
 
-    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     claddingRobpath;
 
-    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     %(feeder_stop)s
 
