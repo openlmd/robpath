@@ -115,6 +115,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.processing = False
         self.timer = QtCore.QTimer(self.plot)
         self.timer.timeout.connect(self.updateProcessing)
+        self.new_xml = False
 
         self.robpath = RobPath()
         self.rapid = Rapid()
@@ -286,6 +287,7 @@ class RobPathUI(QtGui.QMainWindow):
         print routine
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
+        #TODO: Gardar o xml da udc
 
     def btnQuitClicked(self):
         QtCore.QCoreApplication.instance().quit()
