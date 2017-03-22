@@ -210,13 +210,14 @@ class Rapid():
             targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
         # Movement definition
         moves = ''
-        #TODO: Implementar unha unica instruccion con 2 triggers e moveJ entre puntos sin laser
+        laser_track = False
         for k in range(len(path)):
             p, q, process = path[k]
-            if process:
-                moves = '\n'.join([moves, '    TriggL Trobpath%i,vRobpath,laserON%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
+            if laser_track:
+                moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
             else:
-                moves = '\n'.join([moves, '    TriggL Trobpath%i,vRobpath,laserOFF%s,z0,%s\WObj:=%s;' % (k, module_name, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+            laser_track = process
         moves = '\n'.join([moves, '\n'])
 
         tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])

@@ -2,6 +2,7 @@ import os
 import json
 import numpy as np
 import calculate as calc
+import xml.etree.ElementTree as ET
 
 from mesh import Mesh
 from planning import Planning
@@ -62,6 +63,26 @@ class RobPath():
         self.part.name = str(len(self.parts)) + '_' + os.path.basename(filename)
         self.name = self.part.name
         self.parts.append(self.part)
+
+    def load_xml(self, filename):
+        tree = ET.parse(filename)
+        root = tree.getroot()
+        self.path = []
+        lineas = []
+        tool_path = []
+        for line in root.iter('Desplazamiento'):
+            if line.attrib['tipo'] == 'linea3D':
+                puntos = []
+                for punto in line.iter('Punto'):
+                    parray = np.array([float(punto.find('x').text),
+                                float(punto.find('y').text),
+                                float(punto.find('z').text)])
+                    puntos.append(parray)
+                lineas.append(puntos)
+        tool_path = self.planning.get_path_from_fill_lines(lineas)
+        focus = 0
+        tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
+        self.path.extend(tool_path)
 
     def select_part(self, name):
         for part in self.parts:

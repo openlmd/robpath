@@ -30,7 +30,6 @@ class Visualization(HasTraits):
         # This function is called when the view is opened.
         self.scene.mlab.view(0, 65, 150)
         self.scene.background = (0.2, 0.2, 0.2)
-        pass
 
     # the layout of the dialog screated
     view = View(Item('scene', editor=SceneEditor(scene_class=Scene),
@@ -116,6 +115,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.processing = False
         self.timer = QtCore.QTimer(self.plot)
         self.timer.timeout.connect(self.updateProcessing)
+        self.new_xml = False
 
         self.robpath = RobPath()
         self.rapid = Rapid()
@@ -199,18 +199,27 @@ class RobPathUI(QtGui.QMainWindow):
     def btnLoadMeshClicked(self):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
-                self.plot, 'Open file', self.dirname, 'Mesh Files (*.stl)')
+                self.plot, 'Open file', self.dirname,
+                'Mesh Files (*.stl);; Process file (*xml)')
             if filename:
-                self.dirname = os.path.dirname(filename)
-                self.robpath.load_mesh(filename)
-                self.setWindowTitle('Mesh Viewer: %s' % filename)
-                self.btnSelectMesh.addItems([self.robpath.name])
-                self.updateMeshData(self.robpath.name)
-                self.btnProcessMesh.setEnabled(True)
-                self.btnProcessContours.setEnabled(True)
-                self.robpath.part.filling = self.sbFilling.value()
-        except:
-            pass
+                if filename.split('.')[-1] == 'stl':
+                    self.dirname = os.path.dirname(filename)
+                    self.robpath.load_mesh(filename)
+                    self.setWindowTitle('Mesh Viewer: %s' % filename)
+                    self.btnSelectMesh.addItems([self.robpath.name])
+                    self.updateMeshData(self.robpath.name)
+                    self.btnProcessMesh.setEnabled(True)
+                    self.btnProcessContours.setEnabled(True)
+                    self.robpath.part.filling = self.sbFilling.value()
+                else:
+                    self.robpath.load_xml(filename)
+                    self.new_xml = True
+                    self.timer.start(100)
+
+        except AttributeError as error:
+            print error
+        except ValueError as error:
+            print error
         #self.plot.drawMesh(self.robpath.part)
         self.plot.drawMeshes(self.robpath.parts, self.robpath.name)
 
@@ -236,6 +245,11 @@ class RobPathUI(QtGui.QMainWindow):
         self.plot.drawMeshes(self.robpath.parts, selected=self.robpath.name)
 
     def updateProcessing(self):
+        if self.new_xml:
+            self.new_xml = False
+            self.plot.drawPath(self.robpath.path, tuple(np.random.rand(3)))
+            self.timer.stop()
+            return
         if self.robpath.k < len(self.robpath.levels):
             self.robpath.update_process(filled=self.chbFilled.isChecked(),
                                         contour=self.chbContour.isChecked())
@@ -273,6 +287,7 @@ class RobPathUI(QtGui.QMainWindow):
         print routine
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
+        #TODO: Gardar o xml da udc
 
     def btnQuitClicked(self):
         QtCore.QCoreApplication.instance().quit()
