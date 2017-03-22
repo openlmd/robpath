@@ -52,27 +52,30 @@ class QtPart(QtGui.QWidget):
         self.robpath = RobPath()
 
     def btnLoadClicked(self):
-        self.blockSignals(True)
-        self.processing = False
+        try:
+            self.blockSignals(True)
+            self.processing = False
 
-        filename = QtGui.QFileDialog.getOpenFileName(
-            self, 'Open file', os.path.join(path, 'data'),
-            'Mesh Files (*.stl)')[0]
-        self.setWindowTitle(filename)
-        self.robpath.load_mesh(filename)
-        self.dirname = os.path.dirname(filename)
-        self.updateParameters()
+            filename = QtGui.QFileDialog.getOpenFileName(
+                self, 'Open file', os.path.join(path, 'data'),
+                'Mesh Files (*.stl)')[0]
+            self.setWindowTitle(filename)
+            self.robpath.load_mesh(filename)
+            self.dirname = os.path.dirname(filename)
+            self.updateParameters()
 
-        self.updatePosition(self.robpath.part.position)
-        self.updateSize(self.robpath.part.size)
+            self.updatePosition(self.robpath.part.position)
+            self.updateSize(self.robpath.part.size)
 
-        self.part_markers = PartMarkers()
-        self.part_markers.set_mesh(self.robpath.part)
-        self.pub_marker_array.publish(self.part_markers.marker_array)
+            self.part_markers = PartMarkers()
+            self.part_markers.set_mesh(self.robpath.part)
+            self.pub_marker_array.publish(self.part_markers.marker_array)
 
-        self.updateLayers()
-        self.blockSignals(False)
-        self.updatePosition((10, 10, 100))
+            self.updateLayers()
+            self.blockSignals(False)
+            self.updatePosition((10, 10, 100))
+        except ValueError as error:
+            print error
 
     def updateParameters(self):
         height = self.sbHeight.value() + 0.00001
