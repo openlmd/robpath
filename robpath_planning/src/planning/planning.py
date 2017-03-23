@@ -14,7 +14,7 @@ class Planning:
         i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2
         return np.arange(i_min, i_max + v_dist, v_dist)
 
-    def get_grated(self, slice, dist):
+    def get_grated(self, slice, dist, one_dir=False, invert=False):
         dist = dist - 1e-9
         fill_lines = []
         x_min = np.min([np.min(poly[:, 0]) for poly in slice])
@@ -45,10 +45,17 @@ class Planning:
                     indexes = indexes[:len(indexes)-1]
                 #TODO: Group lines (pnt1, pnt2) with the same x value, in the same group of points.
                 fill_lines.append(points[indexes])
+        i_lines = []
+        for line in fill_lines:
+            if invert:
+                line = np.flipud(line)
+            i_lines.append(line)
+        if one_dir:
+            return i_lines
         # Flips the array to start in the last point of the next line.
         lines = []
         pair = False
-        for line in fill_lines:
+        for line in i_lines:
             if pair:
                 line = np.flipud(line)
             pair = not pair
@@ -72,10 +79,10 @@ class Planning:
                     tool_path.append([pnt2, self.orientation, False])
         return tool_path
 
-    def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0):
+    def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False):
         t0 = time.time()
         path = []
-        pair = False
+        #pair = False
         for k, slice in enumerate(slices):
             if slice is not None:
                 if track_distance is None:
@@ -84,7 +91,7 @@ class Planning:
                             path.append([point, self.orientation, True])
                         path.append([contour[-1], self.orientation, False])
                 else:
-                    fill_lines = self.get_grated(slice, track_distance)
+                    fill_lines = self.get_grated(slice, track_distance, one_dir, invert)
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair

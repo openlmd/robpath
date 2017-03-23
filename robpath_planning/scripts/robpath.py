@@ -107,6 +107,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeY.valueChanged.connect(self.changeSize)
         self.sbSizeZ.valueChanged.connect(self.changeSize)
         self.sbFilling.valueChanged.connect(self.changeFilling)
+        self.checkBoxSliceInvertY.stateChanged.connect(self.changeFilling)
+        self.checkBoxSliceInvertX.stateChanged.connect(self.changeFilling)
+        self.checkBoxSliceOnedir.stateChanged.connect(self.changeFilling)
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
@@ -127,6 +130,10 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeX.blockSignals(value)
         self.sbSizeY.blockSignals(value)
         self.sbSizeZ.blockSignals(value)
+        self.sbFilling.blockSignals(value)
+        self.checkBoxSliceInvertY.blockSignals(value)
+        self.checkBoxSliceInvertX.blockSignals(value)
+        self.checkBoxSliceOnedir.blockSignals(value)
 
     def changePosition(self):
         x = self.sbPositionX.value()
@@ -165,6 +172,9 @@ class RobPathUI(QtGui.QMainWindow):
 
     def changeFilling(self):
         self.robpath.part.filling = self.sbFilling.value()
+        self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
+        self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
+        self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
 
     def updatePosition(self, position):
         x, y, z = position
@@ -193,8 +203,11 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbStirrer.setValue(stirrer)
         self.sbTurntable.setValue(turntable)
 
-    def updateFilling(self, filling):
-        self.sbFilling.setValue(filling)
+    def updateFilling(self, part):
+        self.sbFilling.setValue(part.filling)
+        self.checkBoxSliceOnedir.setChecked(part.one_dir_fill)
+        self.checkBoxSliceInvertY.setChecked(part.invert_fill_y)
+        self.checkBoxSliceInvertX.setChecked(part.invert_fill_x)
 
     def btnLoadMeshClicked(self):
         try:
@@ -211,6 +224,9 @@ class RobPathUI(QtGui.QMainWindow):
                     self.btnProcessMesh.setEnabled(True)
                     self.btnProcessContours.setEnabled(True)
                     self.robpath.part.filling = self.sbFilling.value()
+                    self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
+                    self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
+                    self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
                 else:
                     self.robpath.load_xml(filename)
                     self.new_xml = True
@@ -231,7 +247,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.updateTrack(self.robpath.part.get_track())
         self.updateProcess(self.robpath.part.get_process())
         self.updatePowder(self.robpath.part.get_powder())
-        self.updateFilling(self.robpath.part.filling)
+        self.updateFilling(self.robpath.part)
         self.blockSignals(False)
 
     def btnSelectAllClicked(self):
