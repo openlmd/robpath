@@ -122,6 +122,21 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.robpath = RobPath()
         self.rapid = Rapid()
+        self.enableParts(False)
+
+    def enableParts(self, value):
+        self.btnProcessMesh.setEnabled(value)
+        self.btnSelectAll.setEnabled(value)
+        self.sbPositionX.setEnabled(value)
+        self.sbPositionY.setEnabled(value)
+        self.sbPositionZ.setEnabled(value)
+        self.sbSizeX.setEnabled(value)
+        self.sbSizeY.setEnabled(value)
+        self.sbSizeZ.setEnabled(value)
+        self.sbFilling.setEnabled(value)
+        self.checkBoxSliceInvertY.setEnabled(value)
+        self.checkBoxSliceInvertX.setEnabled(value)
+        self.checkBoxSliceOnedir.setEnabled(value)
 
     def blockSignals(self, value):
         self.sbPositionX.blockSignals(value)
@@ -216,6 +231,7 @@ class RobPathUI(QtGui.QMainWindow):
                 'Mesh Files (*.stl);; Process file (*xml)')
             if filename:
                 if filename.split('.')[-1] == 'stl':
+                    self.enableParts(True)
                     self.dirname = os.path.dirname(filename)
                     self.robpath.load_mesh(filename)
                     self.setWindowTitle('Mesh Viewer: %s' % filename)
@@ -283,6 +299,16 @@ class RobPathUI(QtGui.QMainWindow):
             print error
 
     def btnProcessMeshClicked(self):
+        if len(self.robpath.parts) == 0:
+            msg = QtGui.QMessageBox()
+            msg.setIcon(QtGui.QMessageBox.Warning)
+            msg.setText("Error")
+            msg.setInformativeText("A mesh must be loaded")
+            msg.setWindowTitle("Robpath")
+            #msg.setDetailedText("The details are as follows:")
+            msg.setStandardButtons(QtGui.QMessageBox.Ok)       
+            retval = msg.exec_()
+            return
         if self.processing:
             self.timer.stop()
             self.processing = False
