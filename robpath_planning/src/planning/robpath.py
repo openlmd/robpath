@@ -188,12 +188,12 @@ class RobPath():
                             one_dir=self.part.one_dir_fill, invert=self.part.invert_control)
                         tool_path = self.transform_path(tool_path, -degrees[n])
                         self.path.extend(tool_path)
-                    if self.part.invert_fill_x:
-                        self.pair = not self.pair
                 if contour:
                     tool_path = self.planning.get_path_from_slices(
                         [slice], focus=self.part.focus)
                     self.path.extend(tool_path)
+        if self.part.invert_fill_x:
+            self.pair = not self.pair
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
