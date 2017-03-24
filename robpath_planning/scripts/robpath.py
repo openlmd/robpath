@@ -220,6 +220,7 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.load_mesh(filename)
                     self.setWindowTitle('Mesh Viewer: %s' % filename)
                     self.btnSelectMesh.addItems([self.robpath.name])
+                    self.btnSelectMesh.setCurrentIndex(self.btnSelectMesh.count())
                     self.updateMeshData(self.robpath.name)
                     self.btnProcessMesh.setEnabled(True)
                     self.btnProcessContours.setEnabled(True)
@@ -266,17 +267,20 @@ class RobPathUI(QtGui.QMainWindow):
             self.plot.drawPath(self.robpath.path, tuple(np.random.rand(3)))
             self.timer.stop()
             return
-        if self.robpath.k < len(self.robpath.levels):
-            self.robpath.update_process(filled=self.chbFilled.isChecked(),
-                                        contour=self.chbContour.isChecked())
-            #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
-            self.plot.drawPath(self.robpath.path, self.robpath.part.color)
-            self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
-            self.btnSaveRapid.setEnabled(False)
-        else:
-            self.processing = False
-            self.timer.stop()
-            self.btnSaveRapid.setEnabled(True)
+        try:
+            if self.robpath.k < len(self.robpath.levels):
+                self.robpath.update_process(filled=self.chbFilled.isChecked(),
+                                            contour=self.chbContour.isChecked())
+                #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
+                self.plot.drawPath(self.robpath.path, self.robpath.part.color)
+                self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
+                self.btnSaveRapid.setEnabled(False)
+            else:
+                self.processing = False
+                self.timer.stop()
+                self.btnSaveRapid.setEnabled(True)
+        except IndexError as error:
+            print error
 
     def btnProcessMeshClicked(self):
         if self.processing:
