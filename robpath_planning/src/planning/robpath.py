@@ -198,6 +198,13 @@ class RobPath():
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
 
+    def get_process_time(self):
+        time = 0
+        if len(self.path) > 0:
+            length = self.planning.path_length(self.path)
+            time = self.planning.path_time(length, self.part.speed, self.part.speed)
+        return time
+
 
 if __name__ == "__main__":
     import argparse

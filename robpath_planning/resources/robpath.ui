@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
-    <height>700</height>
+    <width>918</width>
+    <height>742</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -64,14 +64,34 @@
     </font>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="26" column="1">
+    <item row="32" column="1">
+     <widget class="Line" name="line_5">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+     </widget>
+    </item>
+    <item row="10" column="1">
+     <widget class="QPushButton" name="btnSelectAll">
+      <property name="font">
+       <font>
+        <weight>50</weight>
+        <bold>false</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Select All</string>
+      </property>
+     </widget>
+    </item>
+    <item row="28" column="1">
      <widget class="Line" name="line_4">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
      </widget>
     </item>
-    <item row="18" column="1" rowspan="8">
+    <item row="20" column="1" rowspan="8">
      <spacer name="verticalSpacer">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -148,7 +168,7 @@
       </property>
      </widget>
     </item>
-    <item row="27" column="1" rowspan="3">
+    <item row="29" column="1" rowspan="3">
      <widget class="QGroupBox" name="groupBox">
       <property name="font">
        <font>
@@ -493,13 +513,6 @@ border: 1px solid gray;</string>
       </property>
      </widget>
     </item>
-    <item row="30" column="1">
-     <widget class="Line" name="line_5">
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-     </widget>
-    </item>
     <item row="8" column="1">
      <widget class="QPushButton" name="btnLoadMesh">
       <property name="minimumSize">
@@ -554,7 +567,7 @@ border: 1px solid gray;</string>
       </property>
      </widget>
     </item>
-    <item row="31" column="1">
+    <item row="33" column="1">
      <widget class="QPushButton" name="btnQuit">
       <property name="enabled">
        <bool>true</bool>
@@ -1103,7 +1116,7 @@ border: 1px solid gray;</string>
       </widget>
      </widget>
     </item>
-    <item row="0" column="0" rowspan="32">
+    <item row="0" column="0" rowspan="34">
      <layout class="QHBoxLayout" name="boxPlot">
       <property name="spacing">
        <number>0</number>
@@ -1138,18 +1151,23 @@ border: 1px solid gray;</string>
       </property>
      </widget>
     </item>
-    <item row="10" column="1">
-     <widget class="QPushButton" name="btnSelectAll">
-      <property name="font">
-       <font>
-        <weight>50</weight>
-        <bold>false</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Select All</string>
-      </property>
-     </widget>
+    <item row="19" column="1">
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QLabel" name="labelLevels">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelTime">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>

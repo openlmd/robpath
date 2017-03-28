@@ -239,7 +239,6 @@ class RobPathUI(QtGui.QMainWindow):
                     self.btnSelectMesh.setCurrentIndex(self.btnSelectMesh.count())
                     self.updateMeshData(self.robpath.name)
                     self.btnProcessMesh.setEnabled(True)
-                    self.btnProcessContours.setEnabled(True)
                     self.robpath.part.filling = self.sbFilling.value()
                     self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
                     self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
@@ -295,6 +294,11 @@ class RobPathUI(QtGui.QMainWindow):
                 self.processing = False
                 self.timer.stop()
                 self.btnSaveRapid.setEnabled(True)
+                time = self.robpath.get_process_time() / 60
+                time_str = str(round(time,2)) + ' minutos'
+                self.labelTime.setText(time_str)
+                n_levels = str(len(self.robpath.levels)-1) + ' layers'
+                self.labelLevels.setText(n_levels)
         except IndexError as error:
             print error
 
@@ -306,7 +310,7 @@ class RobPathUI(QtGui.QMainWindow):
             msg.setInformativeText("A mesh must be loaded")
             msg.setWindowTitle("Robpath")
             #msg.setDetailedText("The details are as follows:")
-            msg.setStandardButtons(QtGui.QMessageBox.Ok)       
+            msg.setStandardButtons(QtGui.QMessageBox.Ok)
             retval = msg.exec_()
             return
         if self.processing:
