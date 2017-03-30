@@ -12,14 +12,17 @@ class Rapid():
         self.set_powder(3, 20, 20)
 
         self.travel_speed = 'v50'
+        self.speed_t = 50
         self.travel_zone = 'z0'
 
         self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0.0, -0.70711, 0.0]] # Tool pose
         self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
 
-    def set_process(self, speed, power):
+    def set_process(self, speed, power, travel=50):
         self.speed = speed
         self.power = power
+        self.speed_t = travel
+
 
     def set_powder(self, carrier, stirrer, turntable):
         self.carrier = carrier
@@ -216,7 +219,7 @@ class Rapid():
             if laser_track:
                 moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
             else:
-                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             laser_track = process
         moves = '\n'.join([moves, '\n'])
 
@@ -234,6 +237,7 @@ class Rapid():
                                 'wobj': wobj,
                                 'wobj_name': wobj_name,
                                 'speed': self.speed,
+                                'speed_t': self.speed_t,
                                 'targets': targets,
                                 'moves': moves}
 

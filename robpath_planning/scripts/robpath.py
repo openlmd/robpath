@@ -175,8 +175,9 @@ class RobPathUI(QtGui.QMainWindow):
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
         focus = self.sbFocus.value()
-        self.robpath.part.set_process(speed, power, focus)
-        self.rapid.set_process(speed, power)
+        travel_speed = 25
+        self.robpath.part.set_process(speed, power, focus, travel_speed)
+        self.rapid.set_process(speed, power, travel_speed)
 
     def changePowder(self):
         carrier = self.sbCarrier.value()
@@ -297,7 +298,7 @@ class RobPathUI(QtGui.QMainWindow):
                 time = self.robpath.get_process_time() / 60
                 time_str = str(round(time,2)) + ' minutos'
                 self.labelTime.setText(time_str)
-                n_levels = str(len(self.robpath.levels)-1) + ' layers'
+                n_levels = str(len(self.robpath.levels)) + ' layers'
                 self.labelLevels.setText(n_levels)
         except IndexError as error:
             print error

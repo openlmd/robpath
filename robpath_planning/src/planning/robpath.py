@@ -12,7 +12,7 @@ class Part(Mesh):
     def __init__(self, filename):
         Mesh.__init__(self, filename)
         # Set parameters
-        self.set_process(8, 1000, 0)
+        self.set_process(8, 1000, 0, 20)
         self.set_track(0.7, 2.5, 0.45)
         self.set_powder(20, 15, 5)
         self.filling = 0.0
@@ -27,8 +27,9 @@ class Part(Mesh):
     def transform_mesh(self, mesh):
         return mesh
 
-    def set_process(self, speed, power, focus):
+    def set_process(self, speed, power, focus, travel=20):
         self.speed = speed
+        self.travel_speed = travel
         self.power = power
         self.focus = focus
 
@@ -202,7 +203,8 @@ class RobPath():
         time = 0
         if len(self.path) > 0:
             length = self.planning.path_length(self.path)
-            time = self.planning.path_time(length, self.part.speed, self.part.speed)
+            time = self.planning.path_time(
+                length, self.part.speed, self.part.travel_speed)
         return time
 
 
