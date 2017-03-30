@@ -117,7 +117,7 @@ class Mesh:
             zmin, zmax = self.position[2], (self.position + self.size)[2]
         print 'Zmin, Zmax:', zmin, zmax
         n_vals = np.round((zmax - zmin) / zdist)
-        i_min = ((zmax + zmin) - (n_vals * zdist)) / 2
+        i_min = zmin #((zmax + zmin) - (n_vals * zdist)) / 2
         i_max = ((zmax + zmin) + (n_vals * zdist)) / 2
         return np.arange(i_min, i_max, zdist) + 0.00001
 
