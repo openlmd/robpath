@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>918</width>
-    <height>742</height>
+    <height>911</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -145,28 +145,6 @@
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="2" column="1" rowspan="5">
-     <widget class="QLabel" name="lblLogo">
-      <property name="minimumSize">
-       <size>
-        <width>120</width>
-        <height>120</height>
-       </size>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap>r.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
     </item>
     <item row="29" column="1" rowspan="3">
      <widget class="QGroupBox" name="groupBox">
@@ -513,7 +491,7 @@ border: 1px solid gray;</string>
       </property>
      </widget>
     </item>
-    <item row="8" column="1">
+    <item row="7" column="1">
      <widget class="QPushButton" name="btnLoadMesh">
       <property name="minimumSize">
        <size>
@@ -1164,6 +1142,32 @@ border: 1px solid gray;</string>
        <widget class="QLabel" name="labelTime">
         <property name="text">
          <string/>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="1" column="1" rowspan="6">
+     <layout class="QGridLayout" name="gridLayout_3">
+      <item row="0" column="0">
+       <widget class="QLabel" name="lblLogo">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>120</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="pixmap">
+         <pixmap>r.png</pixmap>
+        </property>
+        <property name="scaledContents">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
