@@ -12,14 +12,19 @@ class Rapid():
         self.set_powder(3, 20, 20)
 
         self.travel_speed = 'v50'
+        self.speed_t = 50
         self.travel_zone = 'z0'
 
-        self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0.0, -0.70711, 0.0]] # Tool pose
-        self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
+        #self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0.0, -0.70711, 0.0]] # Tool pose
+        self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
+        #self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
+        self.workobject = [[1255, -87, 1032], [1, 0, 0, 0]] # Work Object pose 60
 
-    def set_process(self, speed, power):
+    def set_process(self, speed, power, travel=50):
         self.speed = speed
         self.power = power
+        self.speed_t = travel
+
 
     def set_powder(self, carrier, stirrer, turntable):
         self.carrier = carrier
@@ -211,12 +216,23 @@ class Rapid():
         # Movement definition
         moves = ''
         laser_track = False
+        laser_set = False
         for k in range(len(path)):
             p, q, process = path[k]
-            if laser_track:
-                moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
-            else:
+            if laser_track and process:
+                if not laser_set:
+                    moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                    laser_set = True
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+            elif laser_track and not process:
+                if laser_set:
+                    laser_set = False
+                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                else:
+                    moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
+            else:
+                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             laser_track = process
         moves = '\n'.join([moves, '\n'])
 
@@ -234,6 +250,7 @@ class Rapid():
                                 'wobj': wobj,
                                 'wobj_name': wobj_name,
                                 'speed': self.speed,
+                                'speed_t': self.speed_t,
                                 'targets': targets,
                                 'moves': moves}
 

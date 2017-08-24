@@ -107,6 +107,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeY.valueChanged.connect(self.changeSize)
         self.sbSizeZ.valueChanged.connect(self.changeSize)
         self.sbFilling.valueChanged.connect(self.changeFilling)
+        self.checkBoxSliceInvertY.stateChanged.connect(self.changeFilling)
+        self.checkBoxSliceInvertX.stateChanged.connect(self.changeFilling)
+        self.checkBoxSliceOnedir.stateChanged.connect(self.changeFilling)
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
@@ -119,6 +122,21 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.robpath = RobPath()
         self.rapid = Rapid()
+        self.enableParts(False)
+
+    def enableParts(self, value):
+        self.btnProcessMesh.setEnabled(value)
+        self.btnSelectAll.setEnabled(value)
+        self.sbPositionX.setEnabled(value)
+        self.sbPositionY.setEnabled(value)
+        self.sbPositionZ.setEnabled(value)
+        self.sbSizeX.setEnabled(value)
+        self.sbSizeY.setEnabled(value)
+        self.sbSizeZ.setEnabled(value)
+        self.sbFilling.setEnabled(value)
+        self.checkBoxSliceInvertY.setEnabled(value)
+        self.checkBoxSliceInvertX.setEnabled(value)
+        self.checkBoxSliceOnedir.setEnabled(value)
 
     def blockSignals(self, value):
         self.sbPositionX.blockSignals(value)
@@ -127,6 +145,10 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSizeX.blockSignals(value)
         self.sbSizeY.blockSignals(value)
         self.sbSizeZ.blockSignals(value)
+        self.sbFilling.blockSignals(value)
+        self.checkBoxSliceInvertY.blockSignals(value)
+        self.checkBoxSliceInvertX.blockSignals(value)
+        self.checkBoxSliceOnedir.blockSignals(value)
 
     def changePosition(self):
         x = self.sbPositionX.value()
@@ -153,8 +175,9 @@ class RobPathUI(QtGui.QMainWindow):
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
         focus = self.sbFocus.value()
-        self.robpath.part.set_process(speed, power, focus)
-        self.rapid.set_process(speed, power)
+        travel_speed = 25
+        self.robpath.part.set_process(speed, power, focus, travel_speed)
+        self.rapid.set_process(speed, power, travel_speed)
 
     def changePowder(self):
         carrier = self.sbCarrier.value()
@@ -165,6 +188,9 @@ class RobPathUI(QtGui.QMainWindow):
 
     def changeFilling(self):
         self.robpath.part.filling = self.sbFilling.value()
+        self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
+        self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
+        self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
 
     def updatePosition(self, position):
         x, y, z = position
@@ -193,8 +219,11 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbStirrer.setValue(stirrer)
         self.sbTurntable.setValue(turntable)
 
-    def updateFilling(self, filling):
-        self.sbFilling.setValue(filling)
+    def updateFilling(self, part):
+        self.sbFilling.setValue(part.filling)
+        self.checkBoxSliceOnedir.setChecked(part.one_dir_fill)
+        self.checkBoxSliceInvertY.setChecked(part.invert_fill_y)
+        self.checkBoxSliceInvertX.setChecked(part.invert_fill_x)
 
     def btnLoadMeshClicked(self):
         try:
@@ -203,14 +232,18 @@ class RobPathUI(QtGui.QMainWindow):
                 'Mesh Files (*.stl);; Process file (*xml)')
             if filename:
                 if filename.split('.')[-1] == 'stl':
+                    self.enableParts(True)
                     self.dirname = os.path.dirname(filename)
                     self.robpath.load_mesh(filename)
                     self.setWindowTitle('Mesh Viewer: %s' % filename)
                     self.btnSelectMesh.addItems([self.robpath.name])
+                    self.btnSelectMesh.setCurrentIndex(self.btnSelectMesh.count())
                     self.updateMeshData(self.robpath.name)
                     self.btnProcessMesh.setEnabled(True)
-                    self.btnProcessContours.setEnabled(True)
                     self.robpath.part.filling = self.sbFilling.value()
+                    self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
+                    self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
+                    self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
                 else:
                     self.robpath.load_xml(filename)
                     self.new_xml = True
@@ -231,7 +264,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.updateTrack(self.robpath.part.get_track())
         self.updateProcess(self.robpath.part.get_process())
         self.updatePowder(self.robpath.part.get_powder())
-        self.updateFilling(self.robpath.part.filling)
+        self.updateFilling(self.robpath.part)
         self.blockSignals(False)
 
     def btnSelectAllClicked(self):
@@ -250,19 +283,37 @@ class RobPathUI(QtGui.QMainWindow):
             self.plot.drawPath(self.robpath.path, tuple(np.random.rand(3)))
             self.timer.stop()
             return
-        if self.robpath.k < len(self.robpath.levels):
-            self.robpath.update_process(filled=self.chbFilled.isChecked(),
-                                        contour=self.chbContour.isChecked())
-            #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
-            self.plot.drawPath(self.robpath.path, self.robpath.part.color)
-            self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
-            self.btnSaveRapid.setEnabled(False)
-        else:
-            self.processing = False
-            self.timer.stop()
-            self.btnSaveRapid.setEnabled(True)
+        try:
+            if self.robpath.k < len(self.robpath.levels):
+                self.robpath.update_process(filled=self.chbFilled.isChecked(),
+                                            contour=self.chbContour.isChecked())
+                #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
+                self.plot.drawPath(self.robpath.path, self.robpath.part.color)
+                self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
+                self.btnSaveRapid.setEnabled(False)
+            else:
+                self.processing = False
+                self.timer.stop()
+                self.btnSaveRapid.setEnabled(True)
+                time = self.robpath.get_process_time() / 60
+                time_str = str(round(time,2)) + ' minutos'
+                self.labelTime.setText(time_str)
+                n_levels = str(len(self.robpath.levels)) + ' layers'
+                self.labelLevels.setText(n_levels)
+        except IndexError as error:
+            print error
 
     def btnProcessMeshClicked(self):
+        if len(self.robpath.parts) == 0:
+            msg = QtGui.QMessageBox()
+            msg.setIcon(QtGui.QMessageBox.Warning)
+            msg.setText("Error")
+            msg.setInformativeText("A mesh must be loaded")
+            msg.setWindowTitle("Robpath")
+            #msg.setDetailedText("The details are as follows:")
+            msg.setStandardButtons(QtGui.QMessageBox.Ok)
+            retval = msg.exec_()
+            return
         if self.processing:
             self.timer.stop()
             self.processing = False

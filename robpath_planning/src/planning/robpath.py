@@ -12,10 +12,14 @@ class Part(Mesh):
     def __init__(self, filename):
         Mesh.__init__(self, filename)
         # Set parameters
-        self.set_process(8, 1000, 0)
+        self.set_process(8, 1000, 0, 20)
         self.set_track(0.7, 2.5, 0.45)
         self.set_powder(20, 15, 5)
         self.filling = 0.0
+        self.one_dir_fill = True
+        self.invert_fill_y = True
+        self.invert_fill_x = True
+        self.invert_control = True
 
     def resize_mesh(self, size):
         self.scale(size / self.size)
@@ -23,8 +27,9 @@ class Part(Mesh):
     def transform_mesh(self, mesh):
         return mesh
 
-    def set_process(self, speed, power, focus):
+    def set_process(self, speed, power, focus, travel=20):
         self.speed = speed
+        self.travel_speed = travel
         self.power = power
         self.focus = focus
 
@@ -142,7 +147,7 @@ class RobPath():
         self.k = 0
         self.path = []
         self.slices = []
-        self.pair = False
+        self.pair = True
         if self.name is None and len(self.parts) > 0:
             zmin, zmax = self.parts[0].position[2], (self.parts[0].position + self.parts[0].size)[2]
             for part in self.parts:
@@ -159,6 +164,8 @@ class RobPath():
         tool_path = []
         slices = []
         degrees = []
+        if self.part.invert_fill_y:
+            self.part.invert_control = not self.part.invert_control
         if self.name is None:
             for part in self.parts:
                 slices.append(part.get_slice(self.levels[self.k]))
@@ -172,23 +179,33 @@ class RobPath():
                 if filled:
                     if degrees[n] == 0.0:
                         tool_path = self.planning.get_path_from_slices(
-                            [slice], self.part.track_distance, self.pair, focus=self.part.focus)
-                        self.pair = not self.pair
+                            [slice], self.part.track_distance, self.pair, focus=self.part.focus,
+                            one_dir=self.part.one_dir_fill, invert=self.part.invert_control)
                         self.path.extend(tool_path)
                     else:
                         tslice = self.transform_slice(slice, degrees[n])
                         tool_path = self.planning.get_path_from_slices(
-                            [tslice], self.part.track_distance, self.pair, focus=self.part.focus)
-                        self.pair = not self.pair
+                            [tslice], self.part.track_distance, self.pair, focus=self.part.focus,
+                            one_dir=self.part.one_dir_fill, invert=self.part.invert_control)
                         tool_path = self.transform_path(tool_path, -degrees[n])
                         self.path.extend(tool_path)
                 if contour:
                     tool_path = self.planning.get_path_from_slices(
                         [slice], focus=self.part.focus)
                     self.path.extend(tool_path)
+        if self.part.invert_fill_x:
+            self.pair = not self.pair
         self.k = self.k + 1
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
+
+    def get_process_time(self):
+        time = 0
+        if len(self.path) > 0:
+            length = self.planning.path_length(self.path)
+            time = self.planning.path_time(
+                length, self.part.speed, self.part.travel_speed)
+        return time
 
 
 if __name__ == "__main__":
