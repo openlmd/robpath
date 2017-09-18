@@ -155,7 +155,8 @@ class Rapid():
         return LASER_TEMPLATE
 
     def rapid_feeder_conf(self, feeder_type):
-        FEEDER_TEMPLATE = 'Set DoWeldGas;\n'
+        FEEDER_TEMPLATE = '    Set DoRootGas;'
+        FEEDER_TEMPLATE += 'Set DoWeldGas;\n'
         if feeder_type == 'medicoat':
             FEEDER_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
             FEEDER_TEMPLATE += '    MedicoatL1 "OFF", %(carrier)i, %(stirrer)i, %(turntable)i;'
@@ -176,6 +177,7 @@ class Rapid():
         elif feeder_type == 'gtv':
             FEEDER_TEMPLATE += 'Reset doGTV_StartExtern;\n'
         FEEDER_TEMPLATE += '    Reset DoWeldGas;'
+        FEEDER_TEMPLATE += '    Reset DoRootGas;'
         return FEEDER_TEMPLATE
 
     def load_template(self):
@@ -227,10 +229,12 @@ class Rapid():
             elif laser_track and not process:
                 if laser_set:
                     laser_set = False
-                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                     moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                 else:
                     moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
+            elif not laser_track and process:
+                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             else:
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             laser_track = process

@@ -89,6 +89,12 @@ class RobPathUI(QtGui.QMainWindow):
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         uic.loadUi(os.path.join(path, 'resources', 'robpath.ui'), self)
 
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir+"/configs/config.ini"
+
+        self.settings = QtCore.QSettings(fileDir, QtCore.QSettings.IniFormat)
+
         self.plot = QMayavi()
         self.boxPlot.addWidget(self.plot)
         self.plot.drawWorkingArea()
@@ -110,6 +116,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceInvertY.stateChanged.connect(self.changeFilling)
         self.checkBoxSliceInvertX.stateChanged.connect(self.changeFilling)
         self.checkBoxSliceOnedir.stateChanged.connect(self.changeFilling)
+
+        self.actionLoadSettings.triggered.connect(self.loadSettings)
+        self.actionSaveSettings.triggered.connect(self.saveSettings)
 
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
@@ -150,6 +159,21 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceInvertX.blockSignals(value)
         self.checkBoxSliceOnedir.blockSignals(value)
 
+    def loadSettings(self):
+        #TODO:
+        print 'load'
+        self.sbOverlap.setValue(float(self.settings.value("overlap")))
+        self.sbWidth.setValue(float(self.settings.value("width")))
+        self.sbHeight.setValue(float(self.settings.value("height")))
+        self.sbSpeed.setValue(float(self.settings.value("process_speed")))
+
+    def saveSettings(self):
+        print 'save'
+        self.settings.setValue("overlap", self.sbOverlap.value())
+        self.settings.setValue("width", self.sbWidth.value())
+        self.settings.setValue("height", self.sbHeight.value())
+        self.settings.setValue("process_speed", self.sbSpeed.value())
+
     def changePosition(self):
         x = self.sbPositionX.value()
         y = self.sbPositionY.value()
@@ -175,7 +199,7 @@ class RobPathUI(QtGui.QMainWindow):
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
         focus = self.sbFocus.value()
-        travel_speed = 25
+        travel_speed = self.sbTravel.value()
         self.robpath.part.set_process(speed, power, focus, travel_speed)
         self.rapid.set_process(speed, power, travel_speed)
 
