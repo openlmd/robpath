@@ -128,6 +128,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.timer = QtCore.QTimer(self.plot)
         self.timer.timeout.connect(self.updateProcessing)
         self.new_xml = False
+        self.manual_stop = False
+        self.stop_layer = None
 
         self.robpath = RobPath()
         self.rapid = Rapid()
@@ -166,6 +168,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbWidth.setValue(float(self.settings.value("width")))
         self.sbHeight.setValue(float(self.settings.value("height")))
         self.sbSpeed.setValue(float(self.settings.value("process_speed")))
+        self.sbTravel.setValue(float(self.settings.value("travel_speed")))
+        self.stop_layer = int(self.settings.value("stop_layer"))
 
     def saveSettings(self):
         print 'save'
@@ -173,6 +177,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.settings.setValue("width", self.sbWidth.value())
         self.settings.setValue("height", self.sbHeight.value())
         self.settings.setValue("process_speed", self.sbSpeed.value())
+        self.settings.setValue("travel_speed", self.sbTravel.value())
 
     def changePosition(self):
         x = self.sbPositionX.value()
@@ -324,10 +329,17 @@ class RobPathUI(QtGui.QMainWindow):
                 self.labelTime.setText(time_str)
                 n_levels = str(len(self.robpath.levels)) + ' layers'
                 self.labelLevels.setText(n_levels)
+            if self.stop_layer == self.robpath.k:
+                self.timer.stop()
+                self.manual_stop = True
         except IndexError as error:
             print error
 
     def btnProcessMeshClicked(self):
+        if self.manual_stop:
+            self.manual_stop = False
+            self.timer.start(100)
+            return
         if len(self.robpath.parts) == 0:
             msg = QtGui.QMessageBox()
             msg.setIcon(QtGui.QMessageBox.Warning)
