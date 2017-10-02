@@ -155,7 +155,7 @@ class Rapid():
         return LASER_TEMPLATE
 
     def rapid_feeder_conf(self, feeder_type):
-        FEEDER_TEMPLATE = '    Set DoRootGas;'
+        FEEDER_TEMPLATE = '    Set DoRootGas;\n'
         FEEDER_TEMPLATE += 'Set DoWeldGas;\n'
         if feeder_type == 'medicoat':
             FEEDER_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
@@ -176,8 +176,8 @@ class Rapid():
             FEEDER_TEMPLATE += '    Reset doMdtPL1On;\n'
         elif feeder_type == 'gtv':
             FEEDER_TEMPLATE += 'Reset doGTV_StartExtern;\n'
-        FEEDER_TEMPLATE += '    Reset DoWeldGas;'
-        FEEDER_TEMPLATE += '    Reset DoRootGas;'
+        FEEDER_TEMPLATE += '    Reset DoWeldGas;\n'
+        FEEDER_TEMPLATE += '    Reset DoRootGas;\n'
         return FEEDER_TEMPLATE
 
     def load_template(self):
@@ -219,8 +219,21 @@ class Rapid():
         moves = ''
         laser_track = False
         laser_set = False
+        return_track = False
+        p_ant, q_ant, process_ant = None, None, None
+        dir_x_pos = True
         for k in range(len(path)):
             p, q, process = path[k]
+            if return_track:
+                if dir_x_pos:
+                    pass
+                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                else:
+                    pass
+                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                return_track = False
             if laser_track and process:
                 if not laser_set:
                     moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
@@ -233,11 +246,21 @@ class Rapid():
                     moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                 else:
                     moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
+                    if p_ant[1] < p[1]:
+                        dir_x_pos = True
+                        moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                        #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    else:
+                        dir_x_pos = False
+                        moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                        #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, -30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    return_track = True
             elif not laser_track and process:
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             else:
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             laser_track = process
+            p_ant, q_ant, process_ant = path[k]
         moves = '\n'.join([moves, '\n'])
 
         tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
