@@ -309,7 +309,7 @@ class RobPathUI(QtGui.QMainWindow):
     def updateProcessing(self):
         if self.new_xml:
             self.new_xml = False
-            self.plot.drawPath(self.robpath.path, tuple(np.random.rand(3)))
+            self.plot.drawPath(self.robpath.path, color=(1.0, 1.0, 0))
             self.timer.stop()
             return
         try:
