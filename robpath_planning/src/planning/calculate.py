@@ -1,5 +1,6 @@
 import numpy as np
 import transformations as tf
+import math as math
 
 
 # Point operations
@@ -50,8 +51,56 @@ def normal_vector(point1, point2, point3):
 def line2d(point1, point2):
     (x1, y1), (x2, y2) = point1, point2
     m = (y2 - y1) / (x2 - x1)
-    b = y1 - m * x1
+    if x2 == x1:
+        b = x1
+    else:
+        b = y1 - m * x1
+    if math.isinf(m) or math.isinf(-m):
+        print 'Linea con inf (P1 , P2):'
+        print point1
+        print point2
     return m, b
+
+
+def line2d_angle(point1, angle):
+    (x1, y1) = point1
+    m = math.tan(math.radians(angle))
+    b = y1 - m * x1
+    # TODO: Check infinite values
+    return m, b
+
+
+def parallel_line2d(m, b, d):
+    b_ = None
+    if math.isinf(m) or math.isinf(-m):
+        b_ = d
+    else:
+        b_ = b + d * math.sqrt(m * m + 1)
+    return m, b_
+
+
+def line2d_point_distance(m, b, point):
+    (x0, y0) = point
+    dist = None
+    if math.isinf(m) or math.isinf(-m):
+        dist = b - y0
+    else:
+        dist = (b + m * x0 - y0) / math.sqrt(m * m + 1)
+    if dist < 0:
+        dist = dist * - 1
+    if (m * x0 - y0 + b) > 0:
+        dist = dist * - 1
+    return dist
+
+
+def line2d_intersec(m1, b1, m2, b2):
+    x = None
+    if math.isinf(m2) or math.isinf(-m2):
+        x = b2
+    else:
+        x = (b2 - b1) / (m1 - m2)
+    y = m1 * x + b1
+    return x, y
 
 
 # Vector operations

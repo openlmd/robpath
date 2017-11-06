@@ -199,6 +199,39 @@ class RobPath():
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
 
+
+    def update_process_alfa(self, filled=True, contour=False):
+        tool_path = []
+        slices = []
+        degrees = []
+        if self.part.invert_fill_y:
+            self.part.invert_control = not self.part.invert_control
+        if self.name is None:
+            for part in self.parts:
+                slices.append(part.get_slice(self.levels[self.k]))
+                degrees.append(part.filling)
+        else:
+            slices.append(self.part.get_slice(self.levels[self.k]))
+            degrees.append(self.part.filling)
+        for n, slice in enumerate(slices):
+            if slice is not None:
+                self.slices.append(slice)
+                if filled:
+                    tool_path = self.planning.get_path_from_slices(
+                        [slice], self.part.track_distance, self.pair, focus=self.part.focus,
+                        one_dir=self.part.one_dir_fill, invert=self.part.invert_control, degrees=degrees[n])
+                    self.path.extend(tool_path)
+                if contour:
+                    tool_path = self.planning.get_path_from_slices(
+                        [slice], focus=self.part.focus)
+                    self.path.extend(tool_path)
+        if self.part.invert_fill_x:
+            self.pair = not self.pair
+        self.k = self.k + 1
+        print 'k, levels:', self.k, len(self.levels)
+        return tool_path
+
+
     def get_process_time(self):
         time = 0
         if len(self.path) > 0:

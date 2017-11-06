@@ -314,7 +314,7 @@ class RobPathUI(QtGui.QMainWindow):
             return
         try:
             if self.robpath.k < len(self.robpath.levels):
-                self.robpath.update_process(filled=self.chbFilled.isChecked(),
+                self.robpath.update_process_alfa(filled=self.chbFilled.isChecked(),
                                             contour=self.chbContour.isChecked())
                 #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
                 self.plot.drawPath(self.robpath.path, self.robpath.part.color)

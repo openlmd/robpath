@@ -14,36 +14,57 @@ class Planning:
         i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2
         return np.arange(i_min, i_max + v_dist, v_dist)
 
-    def get_grated(self, slice, dist, one_dir=False, invert=False):
+    def get_min_max(self, poly, degrees):
+        '''Gets the outer points from a plygon crossed by a stright line'''
+        m, b = None, None
+        m, b = calc.line2d_angle((0, 0), degrees)
+        dist_max = np.max([calc.line2d_point_distance(m, b, (point[0], point[1])) for point in poly])
+        dist_min = np.min([calc.line2d_point_distance(m, b, (point[0], point[1])) for point in poly])
+        return dist_min, dist_max
+
+    def get_grated(self, slice, dist, one_dir=False, invert=False, degrees=0.0):
         dist = dist - 1e-9
         fill_lines = []
-        x_min = np.min([np.min(poly[:, 0]) for poly in slice])
-        x_max = np.max([np.max(poly[:, 0]) for poly in slice])
-        for x in self.get_range_values(x_min, x_max, dist):
+        if degrees == 90.0 or degrees == 270.0:
+            degrees = degrees + 0.1
+            #TODO: Correxir bug con 90 grados
+        m, b = None, None
+        m, b = calc.line2d_angle((0, 0), degrees)
+
+        dist_max = np.max([np.max([calc.line2d_point_distance(m, b, (point[0], point[1])) for point in poly]) for poly in slice])
+        dist_min = np.min([np.min([calc.line2d_point_distance(m, b, (point[0], point[1])) for point in poly]) for poly in slice])
+
+        for x in self.get_range_values(dist_min, dist_max, dist):
             points = []
+            m_, b_ = calc.parallel_line2d(m, b, x)
             for poly in slice:
                 for k in range(len(poly)):
                     point = None
-                    pnt1, pnt2 = poly[k-1], poly[k]
-                    if pnt2[0] == x:
-                        point = pnt2
-                    else:
-                        if (pnt1[0] < x and pnt2[0] > x) or (pnt1[0] > x and pnt2[0] < x):
-                            my, by = calc.line2d((pnt1[0], pnt1[1]),
-                                                 (pnt2[0], pnt2[1]))
-                            # point = np.array([x, my * x + by, pnt1[2]])
-                            mz, bz = calc.line2d((pnt1[0], pnt1[2]),
-                                                 (pnt2[0], pnt2[2]))
-                            point = np.array([x, my * x + by, mz * x + bz])
+                    pnt1, pnt2 = poly[k - 1], poly[k]
+                    d1 = calc.line2d_point_distance(m_, b_, (pnt1[0], pnt1[1]))
+                    d2 = calc.line2d_point_distance(m_, b_, (pnt2[0], pnt2[1]))
+                    if ((d1 > 0.0) != (d2 > 0.0)) or ((d1 == 0) != (d2 == 0)):
+                        # Cortanse
+                        my, by = calc.line2d((pnt1[0], pnt1[1]),
+                                             (pnt2[0], pnt2[1]))
+                        intersec_x, intersec_y = calc.line2d_intersec(m_, b_,
+                                                                      my, by)
+                        point = np.array([intersec_x, intersec_y, pnt1[2]])
+                    elif (d1 == 0) and (d2 == 0):
+                        # Coinciden
+                        points.append(pnt1)
+                        points.append(pnt2)
                     if point is not None:
                         points.append(point)
             if not points == []:
                 points = np.array(points)
-                indexes = np.argsort(points[:, 1])
+                if (85 < degrees  < 95)  or (265 < degrees  < 275):
+                    indexes = np.argsort(points[:, 1])
+                else:
+                    indexes = np.argsort(points[:, 0])
                 if len(indexes) % 2:
                     print 'ERROR!', len(indexes), 'tangent element finded'
                     indexes = indexes[:len(indexes)-1]
-                #TODO: Group lines (pnt1, pnt2) with the same x value, in the same group of points.
                 fill_lines.append(points[indexes])
         i_lines = []
         for line in fill_lines:
@@ -79,19 +100,20 @@ class Planning:
                     tool_path.append([pnt2, self.orientation, False])
         return tool_path
 
-    def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False):
+    def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False, degrees=None):
         t0 = time.time()
         path = []
         #pair = False
         for k, slice in enumerate(slices):
             if slice is not None:
                 if track_distance is None:
-                    for contour in slice:
-                        for point in contour[:-1]:
-                            path.append([point, self.orientation, True])
-                        path.append([contour[-1], self.orientation, False])
+                    #for contour in slice:
+                    contour = slice[1]
+                    for point in contour[:-1]:
+                        path.append([point, self.orientation, True])
+                    path.append([contour[-1], self.orientation, False])
                 else:
-                    fill_lines = self.get_grated(slice, track_distance, one_dir, invert)
+                    fill_lines = self.get_grated(slice, track_distance, one_dir, invert, degrees)
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair
