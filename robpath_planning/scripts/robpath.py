@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
+import json
 os.environ['QT_API'] = 'pyqt'
 os.environ['ETS_TOOLKIT'] = 'qt4'
 
@@ -91,9 +92,10 @@ class RobPathUI(QtGui.QMainWindow):
 
         fileNam = os.path.realpath(__file__)
         fileDir = os.path.dirname(fileNam)
-        fileDir = fileDir+"/configs/config.ini"
+        fileDir = fileDir + "/configs/config.json"
 
-        self.settings = QtCore.QSettings(fileDir, QtCore.QSettings.IniFormat)
+        with open(fileDir) as data_file:
+            self.settings = json.load(data_file)
 
         self.plot = QMayavi()
         self.boxPlot.addWidget(self.plot)
@@ -162,22 +164,38 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceOnedir.blockSignals(value)
 
     def loadSettings(self):
-        #TODO:
         print 'load'
-        self.sbOverlap.setValue(float(self.settings.value("overlap")))
-        self.sbWidth.setValue(float(self.settings.value("width")))
-        self.sbHeight.setValue(float(self.settings.value("height")))
-        self.sbSpeed.setValue(float(self.settings.value("process_speed")))
-        self.sbTravel.setValue(float(self.settings.value("travel_speed")))
-        self.stop_layer = int(self.settings.value("stop_layer"))
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir + "/configs/config.json"
+
+        with open(fileDir) as data_file:
+            self.settings = json.load(data_file)
+
+        self.sbOverlap.setValue(self.settings["overlap"])
+        self.sbWidth.setValue(self.settings["width"])
+        self.sbHeight.setValue(self.settings["height"])
+        self.sbSpeed.setValue(self.settings["process_speed"])
+        self.sbTravel.setValue(self.settings["travel_speed"])
+        self.stop_layer = self.settings["stop_layer"]
+        self.rapid.laser_type = self.settings["laser_type"]
+        self.rapid.feeder_type = self.settings["feeder_type"]
 
     def saveSettings(self):
         print 'save'
-        self.settings.setValue("overlap", self.sbOverlap.value())
-        self.settings.setValue("width", self.sbWidth.value())
-        self.settings.setValue("height", self.sbHeight.value())
-        self.settings.setValue("process_speed", self.sbSpeed.value())
-        self.settings.setValue("travel_speed", self.sbTravel.value())
+        self.settings["overlap"] = self.sbOverlap.value()
+        self.settings["width"] = self.sbWidth.value()
+        self.settings["height"] = self.sbHeight.value()
+        self.settings["process_speed"] = self.sbSpeed.value()
+        self.settings["travel_speed"] = self.sbTravel.value()
+
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir + "/configs/config.json"
+
+        with open(fileDir, 'w') as data_file:
+            data_file.write(json.dumps(self.settings, sort_keys=True,
+                                       indent=2, separators=(',', ': ')))
 
     def changePosition(self):
         x = self.sbPositionX.value()

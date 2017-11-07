@@ -1,0 +1,10 @@
+{
+  "feeder_type": "gtv",
+  "height": 1.1,
+  "laser_type": "trudisk",
+  "overlap": 55.0,
+  "process_speed": 8.0,
+  "stop_layer": 1,
+  "travel_speed": 55.0,
+  "width": 3.0
+}
