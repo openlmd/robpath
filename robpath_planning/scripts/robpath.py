@@ -172,22 +172,22 @@ class RobPathUI(QtGui.QMainWindow):
         with open(fileDir) as data_file:
             self.settings = json.load(data_file)
 
-        self.sbOverlap.setValue(self.settings["overlap"])
-        self.sbWidth.setValue(self.settings["width"])
-        self.sbHeight.setValue(self.settings["height"])
-        self.sbSpeed.setValue(self.settings["process_speed"])
-        self.sbTravel.setValue(self.settings["travel_speed"])
-        self.stop_layer = self.settings["stop_layer"]
-        self.rapid.laser_type = self.settings["laser_type"]
-        self.rapid.feeder_type = self.settings["feeder_type"]
+        self.sbOverlap.setValue(self.settings["configuration"]["overlap"])
+        self.sbWidth.setValue(self.settings["configuration"]["width"])
+        self.sbHeight.setValue(self.settings["configuration"]["height"])
+        self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
+        self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
+        self.stop_layer = self.settings["configuration"]["stop_layer"]
+        self.rapid.laser_type = self.settings["configuration"]["laser_type"]
+        self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
 
     def saveSettings(self):
         print 'save'
-        self.settings["overlap"] = self.sbOverlap.value()
-        self.settings["width"] = self.sbWidth.value()
-        self.settings["height"] = self.sbHeight.value()
-        self.settings["process_speed"] = self.sbSpeed.value()
-        self.settings["travel_speed"] = self.sbTravel.value()
+        self.settings["configuration"]["overlap"] = self.sbOverlap.value()
+        self.settings["configuration"]["width"] = self.sbWidth.value()
+        self.settings["configuration"]["height"] = self.sbHeight.value()
+        self.settings["configuration"]["process_speed"] = self.sbSpeed.value()
+        self.settings["configuration"]["travel_speed"] = self.sbTravel.value()
 
         fileNam = os.path.realpath(__file__)
         fileDir = os.path.dirname(fileNam)

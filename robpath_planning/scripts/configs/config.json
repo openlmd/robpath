@@ -1,10 +1,23 @@
 {
-  "feeder_type": "gtv",
-  "height": 1.1,
-  "laser_type": "trudisk",
-  "overlap": 55.0,
-  "process_speed": 8.0,
-  "stop_layer": 1,
-  "travel_speed": 55.0,
-  "width": 3.0
+  "configuration": {
+    "feeder_type": "gtv",
+    "height": 1.1,
+    "laser_type": "trudisk",
+    "overlap": 55.0,
+    "process_speed": 8.0,
+    "stop_layer": 1,
+    "travel_speed": 55.0,
+    "width": 3.0
+  },
+  "limits": {
+    "feeder_type": [
+      "gtv",
+      "medicoat",
+      "wire"
+    ],
+    "laser_type": [
+      "trudisk",
+      "rofin_rf"
+    ]
+  }
 }
