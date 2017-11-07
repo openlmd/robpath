@@ -193,14 +193,14 @@ class Rapid():
                 RAPID_TEMPLATE += line
         return RAPID_TEMPLATE
 
-    def path2rapid_beta(self, path, module_name ='Robpath'):
+    def path2rapid_beta(self, path, module_name='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
-        #TODO: Get powder and laser parameters
+        # TODO: Get powder and laser parameters
 
-        if laser == 'rofin_rf':
+        if self.laser_type == 'rofin_rf':
             laser_out = 'Do_RF_ExterGate'
-        elif laser == 'trudisk':
+        elif self.laser_type == 'trudisk':
             laser_out = 'TdoPStartStat'
 
         laser_conf = self.rapid_laser_conf()

@@ -307,6 +307,7 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.load_xml(filename)
                     self.new_xml = True
                     self.timer.start(100)
+                    self.btnSaveRapid.setEnabled(True)
 
         except AttributeError as error:
             print error

@@ -5,6 +5,7 @@
     "laser_type": "trudisk",
     "overlap": 55.0,
     "process_speed": 8.0,
+    "robot": "abb",
     "stop_layer": 1,
     "travel_speed": 55.0,
     "width": 3.0
@@ -18,6 +19,10 @@
     "laser_type": [
       "trudisk",
       "rofin_rf"
+    ],
+    "robot": [
+      "abb",
+      "kuka"
     ]
   }
 }
