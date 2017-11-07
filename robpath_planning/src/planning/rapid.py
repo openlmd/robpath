@@ -20,11 +20,13 @@ class Rapid():
         #self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
         self.workobject = [[1255, -87, 1032], [1, 0, 0, 0]] # Work Object pose 60
 
+        self.laser_type = 'trudisk'
+        self.feeder_type = 'gtv'
+
     def set_process(self, speed, power, travel=50):
         self.speed = speed
         self.power = power
         self.speed_t = travel
-
 
     def set_powder(self, carrier, stirrer, turntable):
         self.carrier = carrier
@@ -32,7 +34,7 @@ class Rapid():
         self.turntable = turntable
 
     def path2rapid(self, path):
-        RAPID_TEMPLATE  = 'MODULE Etna\n'
+        RAPID_TEMPLATE = 'MODULE Etna\n'
         RAPID_TEMPLATE += '\n'
         RAPID_TEMPLATE += '    PERS tooldata toolEtna:=%(tool)s;\n'
         RAPID_TEMPLATE += '    PERS wobjdata wobjEtna:=%(wobj)s;\n'
@@ -119,9 +121,9 @@ class Rapid():
                                 'turntable': self.turntable,
                                 'power': self.power}
 
-    def rapid_laser_conf(self, laser_type):
+    def rapid_laser_conf(self):
         LASER_TEMPLATE = ''
-        if laser_type == 'rofin_rf':
+        if self.laser_type == 'rofin_rf':
             LASER_TEMPLATE += 'Set Do_RF_MainOn;\n'
             LASER_TEMPLATE += '    Set Do_RF_StandByOn;\n'
             LASER_TEMPLATE += '    WaitDI DI_RF_LaserBeamReady,1;\n'
@@ -130,7 +132,7 @@ class Rapid():
             LASER_TEMPLATE += '    SetGO GO_Program_Rf, 0;\n' # set the program for control of laser power - prog 5
             LASER_TEMPLATE += '    WaitTime 1;\n'
             LASER_TEMPLATE += '    !SetGO GoLDL_Pwr3, %(power)i;\n' # set the laser power - 2200 W
-        elif laser_type == 'trudisk':
+        elif self.laser_type == 'trudisk':
             LASER_TEMPLATE += 'Set TdoExtActiv;\n'
             LASER_TEMPLATE += '    WaitDi TdiExtActiv, 1;\n'
             LASER_TEMPLATE += '    Set TdoLaserOn;\n'
@@ -143,24 +145,24 @@ class Rapid():
             LASER_TEMPLATE += '    WaitDi TdiLaserReady, 1;\n'
         return LASER_TEMPLATE %{'power': self.power}
 
-    def rapid_laser_stop(self, laser_type):
+    def rapid_laser_stop(self):
         LASER_TEMPLATE = ''
-        if laser_type == 'rofin_rf':
-            LASER_TEMPLATE += 'Reset Do_RF_StandByOn;'
-        elif laser_type == 'trudisk':
+        if self.laser_type == 'rofin_rf':
+            LASER_TEMPLATE += 'Reset Do_RF_StandByOn;\n'
+        elif self.laser_type == 'trudisk':
             LASER_TEMPLATE += 'Reset TdoActLaser;\n'
             LASER_TEMPLATE += '    Reset TdoStandBy;\n'
             LASER_TEMPLATE += '    Reset TdoLaserOn;\n'
             LASER_TEMPLATE += '    Reset TdoExtActiv;'
         return LASER_TEMPLATE
 
-    def rapid_feeder_conf(self, feeder_type):
+    def rapid_feeder_conf(self):
         FEEDER_TEMPLATE = '    Set DoRootGas;\n'
         FEEDER_TEMPLATE += 'Set DoWeldGas;\n'
-        if feeder_type == 'medicoat':
+        if self.feeder_type == 'medicoat':
             FEEDER_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
             FEEDER_TEMPLATE += '    MedicoatL1 "OFF", %(carrier)i, %(stirrer)i, %(turntable)i;'
-        elif feeder_type == 'gtv':
+        elif self.feeder_type == 'gtv':
             FEEDER_TEMPLATE += '    SetAO AoGTV_ExternDisk, 35;\n'
             FEEDER_TEMPLATE += '    SetAO AoGTV_ExternMassFlow, 26.6;\n'
             FEEDER_TEMPLATE += '    Set doGTV_StartExtern;\n'
@@ -169,12 +171,12 @@ class Rapid():
                                 'stirrer': self.stirrer,
                                 'turntable': self.turntable}
 
-    def rapid_feeder_stop(self, feeder_type):
+    def rapid_feeder_stop(self):
         FEEDER_TEMPLATE = ''
-        if feeder_type == 'medicoat':
+        if self.feeder_type == 'medicoat':
             FEEDER_TEMPLATE += 'Reset doMdtPL2On;\n'
             FEEDER_TEMPLATE += '    Reset doMdtPL1On;\n'
-        elif feeder_type == 'gtv':
+        elif self.feeder_type == 'gtv':
             FEEDER_TEMPLATE += 'Reset doGTV_StartExtern;\n'
         FEEDER_TEMPLATE += '    Reset DoWeldGas;\n'
         FEEDER_TEMPLATE += '    Reset DoRootGas;\n'
@@ -195,18 +197,16 @@ class Rapid():
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
         #TODO: Get powder and laser parameters
-        feeder = 'gtv'
-        laser = 'trudisk'
 
         if laser == 'rofin_rf':
             laser_out = 'Do_RF_ExterGate'
         elif laser == 'trudisk':
             laser_out = 'TdoPStartStat'
 
-        laser_conf = self.rapid_laser_conf(laser)
-        feeder_conf = self.rapid_feeder_conf(feeder)
-        laser_stop = self.rapid_laser_stop(laser)
-        feeder_stop = self.rapid_feeder_stop(feeder)
+        laser_conf = self.rapid_laser_conf()
+        feeder_conf = self.rapid_feeder_conf()
+        laser_stop = self.rapid_laser_stop()
+        feeder_stop = self.rapid_feeder_stop()
 
         RAPID_TEMPLATE = self.load_template()
 
