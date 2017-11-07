@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import numpy as np
+import json
 os.environ['QT_API'] = 'pyqt'
 os.environ['ETS_TOOLKIT'] = 'qt4'
 
@@ -89,6 +90,13 @@ class RobPathUI(QtGui.QMainWindow):
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
         uic.loadUi(os.path.join(path, 'resources', 'robpath.ui'), self)
 
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir + "/configs/config.json"
+
+        with open(fileDir) as data_file:
+            self.settings = json.load(data_file)
+
         self.plot = QMayavi()
         self.boxPlot.addWidget(self.plot)
         self.plot.drawWorkingArea()
@@ -111,6 +119,9 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceInvertX.stateChanged.connect(self.changeFilling)
         self.checkBoxSliceOnedir.stateChanged.connect(self.changeFilling)
 
+        self.actionLoadSettings.triggered.connect(self.loadSettings)
+        self.actionSaveSettings.triggered.connect(self.saveSettings)
+
         self.btnQuit.clicked.connect(self.btnQuitClicked)
 
         self.dirname = path
@@ -119,6 +130,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.timer = QtCore.QTimer(self.plot)
         self.timer.timeout.connect(self.updateProcessing)
         self.new_xml = False
+        self.manual_stop = False
+        self.stop_layer = None
 
         self.robpath = RobPath()
         self.rapid = Rapid()
@@ -150,6 +163,52 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceInvertX.blockSignals(value)
         self.checkBoxSliceOnedir.blockSignals(value)
 
+    def loadSettings(self):
+        print 'load'
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir + "/configs/config.json"
+
+        with open(fileDir) as data_file:
+            self.settings = json.load(data_file)
+
+        self.sbOverlap.setValue(self.settings["configuration"]["overlap"])
+        self.sbWidth.setValue(self.settings["configuration"]["width"])
+        self.sbHeight.setValue(self.settings["configuration"]["height"])
+        self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
+        self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
+        self.stop_layer = self.settings["configuration"]["stop_layer"]
+        if not self.settings["configuration"]["laser_type"] in self.settings["limits"]["laser_type"]:
+            QtGui.QMessageBox.warning(self, "Cannot configure laser",
+                    "The selected laser type is not implemented.",
+                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                    QtGui.QMessageBox.NoButton)
+        else:
+            self.rapid.laser_type = self.settings["configuration"]["laser_type"]
+        if not self.settings["configuration"]["feeder_type"] in self.settings["limits"]["feeder_type"]:
+            QtGui.QMessageBox.warning(self, "Cannot configure feeder",
+                    "The selected feeder type is not implemented.",
+                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                    QtGui.QMessageBox.NoButton)
+        else:
+            self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
+
+    def saveSettings(self):
+        print 'save'
+        self.settings["configuration"]["overlap"] = self.sbOverlap.value()
+        self.settings["configuration"]["width"] = self.sbWidth.value()
+        self.settings["configuration"]["height"] = self.sbHeight.value()
+        self.settings["configuration"]["process_speed"] = self.sbSpeed.value()
+        self.settings["configuration"]["travel_speed"] = self.sbTravel.value()
+
+        fileNam = os.path.realpath(__file__)
+        fileDir = os.path.dirname(fileNam)
+        fileDir = fileDir + "/configs/config.json"
+
+        with open(fileDir, 'w') as data_file:
+            data_file.write(json.dumps(self.settings, sort_keys=True,
+                                       indent=2, separators=(',', ': ')))
+
     def changePosition(self):
         x = self.sbPositionX.value()
         y = self.sbPositionY.value()
@@ -175,7 +234,7 @@ class RobPathUI(QtGui.QMainWindow):
         speed = self.sbSpeed.value()
         power = self.sbPower.value()
         focus = self.sbFocus.value()
-        travel_speed = 25
+        travel_speed = self.sbTravel.value()
         self.robpath.part.set_process(speed, power, focus, travel_speed)
         self.rapid.set_process(speed, power, travel_speed)
 
@@ -280,12 +339,12 @@ class RobPathUI(QtGui.QMainWindow):
     def updateProcessing(self):
         if self.new_xml:
             self.new_xml = False
-            self.plot.drawPath(self.robpath.path, tuple(np.random.rand(3)))
+            self.plot.drawPath(self.robpath.path, color=(1.0, 1.0, 0))
             self.timer.stop()
             return
         try:
             if self.robpath.k < len(self.robpath.levels):
-                self.robpath.update_process(filled=self.chbFilled.isChecked(),
+                self.robpath.update_process_alfa(filled=self.chbFilled.isChecked(),
                                             contour=self.chbContour.isChecked())
                 #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
                 self.plot.drawPath(self.robpath.path, self.robpath.part.color)
@@ -300,10 +359,17 @@ class RobPathUI(QtGui.QMainWindow):
                 self.labelTime.setText(time_str)
                 n_levels = str(len(self.robpath.levels)) + ' layers'
                 self.labelLevels.setText(n_levels)
+            if self.stop_layer == self.robpath.k:
+                self.timer.stop()
+                self.manual_stop = True
         except IndexError as error:
             print error
 
     def btnProcessMeshClicked(self):
+        if self.manual_stop:
+            self.manual_stop = False
+            self.timer.start(100)
+            return
         if len(self.robpath.parts) == 0:
             msg = QtGui.QMessageBox()
             msg.setIcon(QtGui.QMessageBox.Warning)

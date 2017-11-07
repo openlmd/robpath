@@ -20,7 +20,7 @@ class Mesh:
             self.bounding_box()
             self.resort_triangles()  # Only for calculation
             self.name = os.path.basename(filename)
-            self.color = tuple(np.random.rand(3))
+            self.color = (1.0, 1.0, 0)
 
     def load_binary_mesh(self, filename):
         try:

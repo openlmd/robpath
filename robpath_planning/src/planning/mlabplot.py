@@ -195,12 +195,20 @@ class MPlot3D():
                       vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
                       color=color, mode='2ddash',
                       scale_factor=1, line_width=5.0)
+        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
+                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+                      color=color, mode='arrow',
+                      scale_factor=3, scale_mode='scalar', line_width=5.0)
         pnts = points[np.bitwise_not(processes)]
         vctrs = vectors[np.bitwise_not(processes)]
         mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
                       vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
                       color=(0.6, 0.6, 0.6), mode='2ddash',
                       scale_factor=1, line_width=2.0)
+        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
+                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+                      color=(0.6, 0.6, 0.6), mode='arrow',
+                      scale_factor=2, scale_mode='scalar', line_width=2.0)
 
     def draw_point_cloud(self, points3d):
         mlab.clf()
