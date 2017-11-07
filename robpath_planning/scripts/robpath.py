@@ -178,8 +178,20 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
         self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
         self.stop_layer = self.settings["configuration"]["stop_layer"]
-        self.rapid.laser_type = self.settings["configuration"]["laser_type"]
-        self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
+        if not self.settings["configuration"]["laser_type"] in self.settings["limits"]["laser_type"]:
+            QtGui.QMessageBox.warning(self, "Cannot configure laser",
+                    "The selected laser type is not implemented.",
+                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                    QtGui.QMessageBox.NoButton)
+        else:
+            self.rapid.laser_type = self.settings["configuration"]["laser_type"]
+        if not self.settings["configuration"]["feeder_type"] in self.settings["limits"]["feeder_type"]:
+            QtGui.QMessageBox.warning(self, "Cannot configure feeder",
+                    "The selected feeder type is not implemented.",
+                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                    QtGui.QMessageBox.NoButton)
+        else:
+            self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
 
     def saveSettings(self):
         print 'save'
