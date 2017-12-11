@@ -84,6 +84,19 @@ class RobPath():
                                 float(punto.find('z').text)])
                     puntos.append(parray)
                 lineas.append(puntos)
+            if line.attrib['tipo'] == 'BuildCutVolume3D':
+                for cut_layers in line.iter('Paths'):
+                    for cut_layer in cut_layers.iter('SubPath'):
+                        for line_3ds in cut_layer.iter('Paths'):
+                            for line_3d in line_3ds.iter('SubPath'):
+                                puntos = []
+                                for punto in line_3d.iter('Punto'):
+                                    parray = np.array([float(punto.find('x').text),
+                                                float(punto.find('y').text),
+                                                float(punto.find('z').text)])
+                                    puntos.append(parray)
+                                lineas.append(puntos)
+                
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
@@ -147,7 +160,7 @@ class RobPath():
         self.k = 0
         self.path = []
         self.slices = []
-        self.pair = True
+        self.pair = False
         if self.name is None and len(self.parts) > 0:
             zmin, zmax = self.parts[0].position[2], (self.parts[0].position + self.parts[0].size)[2]
             for part in self.parts:
@@ -206,6 +219,9 @@ class RobPath():
         degrees = []
         if self.part.invert_fill_y:
             self.part.invert_control = not self.part.invert_control
+        # TODO: Fix contour when zlevel = 0
+        if contour and (self.levels[self.k] < 0.1):
+            self.levels[self.k] = 0.1
         if self.name is None:
             for part in self.parts:
                 slices.append(part.get_slice(self.levels[self.k]))
