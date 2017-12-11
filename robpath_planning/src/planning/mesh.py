@@ -160,6 +160,14 @@ class Mesh:
                 unsorted_lines.append(intersection)
             elif (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
                 print "WARNING: Triangle in z_level!"
+        roll_point = 0
+        xy_dist = unsorted_lines[0][0][0] + unsorted_lines[0][0][1]
+        for n_line in range(len(unsorted_lines)):
+            for point in unsorted_lines[n_line]:
+                d = point[0] + point[1]
+                if d < xy_dist:
+                    roll_point = n_line
+                    xy_dist = d
         if not unsorted_lines == []:
             # Arrange the line segments so that each segment leads to the
             # nearest available segment. This is accomplished by using two
@@ -168,9 +176,9 @@ class Mesh:
             # sorted pile.
             epsilon = 1e-9
             polygons = []
-            point1, point2 = unsorted_lines[0]
-            polygon = [point1, point2]
-            unsorted_lines.pop(0)
+            point1, point2 = unsorted_lines[roll_point]
+            polygon = [point2, point1]
+            unsorted_lines.pop(roll_point)
             while unsorted_lines:
                 last_point = polygon[-1]
                 do_flip, new_line = False, True
@@ -194,6 +202,8 @@ class Mesh:
                     else:
                         if not (calc.distance2(polygon[-1], point2) < epsilon):
                             polygon.append(point2)
+            # polygon = polygon[roll_point:] + polygon[:roll_point]
+            # polygon.reverse()
             polygons.append(np.array(polygon))
             return [poly.filter_polyline(polygon, dist=0.1) for polygon in polygons]  # Polygons filter
         else:

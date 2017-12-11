@@ -108,7 +108,10 @@ class Planning:
             if slice is not None:
                 if track_distance is None:
                     #for contour in slice:
-                    contour = slice[1]
+                    if len(slice) == 1:
+                        contour = slice[0]
+                    else:
+                        contour = slice[1]
                     for point in contour[:-1]:
                         path.append([point, self.orientation, True])
                     path.append([contour[-1], self.orientation, False])

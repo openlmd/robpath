@@ -1,20 +1,24 @@
 {
   "configuration": {
     "feeder_type": "gtv",
-    "height": 1.1,
+    "height": 0.6,
     "laser_type": "trudisk",
-    "overlap": 55.0,
+    "offsets": {
+      "line": 3,
+      "z_dir": 3
+    },
+    "overlap": 0.0,
     "process_speed": 8.0,
     "robot": "abb",
     "stop_layer": 1,
-    "travel_speed": 55.0,
-    "width": 3.0
+    "travel_speed": 25.0,
+    "width": 2.5
   },
   "limits": {
     "feeder_type": [
       "gtv",
       "medicoat",
-      "wire"
+      "tps5000"
     ],
     "laser_type": [
       "trudisk",

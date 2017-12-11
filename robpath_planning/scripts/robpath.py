@@ -192,6 +192,8 @@ class RobPathUI(QtGui.QMainWindow):
                     QtGui.QMessageBox.NoButton)
         else:
             self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
+        self.rapid.offset = self.settings["configuration"]["offsets"]["line"]
+        self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
 
     def saveSettings(self):
         print 'save'
