@@ -20,6 +20,7 @@ class Part(Mesh):
         self.invert_fill_y = True
         self.invert_fill_x = True
         self.invert_control = True
+        self.repair_work = False
 
     def resize_mesh(self, size):
         self.scale(size / self.size)
@@ -96,7 +97,7 @@ class RobPath():
                                                 float(punto.find('z').text)])
                                     puntos.append(parray)
                                 lineas.append(puntos)
-                
+
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
@@ -168,6 +169,8 @@ class RobPath():
                     zmin = part.position[2]
                 if (part.position + part.size)[2] > zmax:
                     zmax = (part.position + part.size)[2]
+                if part.repair_work:
+                    zmin = part.min_z_repair
             self.levels = self.parts[0].get_zlevels(self.parts[0].track_height, zmin=zmin, zmax=zmax)
         else:
             self.levels = self.part.get_zlevels(self.part.track_height)
