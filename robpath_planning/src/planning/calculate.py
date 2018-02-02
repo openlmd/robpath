@@ -56,9 +56,10 @@ def line2d(point1, point2):
     else:
         b = y1 - m * x1
     if math.isinf(m) or math.isinf(-m):
-        print 'Linea con inf (P1 , P2):'
-        print point1
-        print point2
+        # print 'Linea con inf (P1 , P2):'
+        # print point1
+        # print point2
+        pass
     return m, b
 
 
