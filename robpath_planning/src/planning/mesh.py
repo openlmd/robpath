@@ -104,7 +104,7 @@ class Mesh:
         self.devmap.save_stl(filename)
 
     def divide_segment(self, segment):
-        self.rays.divide_segment(segment)
+        return self.rays.divide_segment(segment)
 
     def bounding_box(self):
         b1 = [10000, 10000, 10000]

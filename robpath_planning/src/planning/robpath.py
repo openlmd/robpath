@@ -239,10 +239,13 @@ class RobPath():
                     tool_path = self.planning.get_path_from_slices(
                         [slice], self.part.track_distance, self.pair, focus=self.part.focus,
                         one_dir=self.part.one_dir_fill, invert=self.part.invert_control, degrees=degrees[n])
+                    if self.part.repair_work:
+                        tool_path = self.repair_tool_path(tool_path)
                     self.path.extend(tool_path)
                 if contour:
                     tool_path = self.planning.get_path_from_slices(
                         [slice], focus=self.part.focus)
+                    #  TODO: Repair
                     self.path.extend(tool_path)
         if self.part.invert_fill_x:
             self.pair = not self.pair
@@ -250,6 +253,27 @@ class RobPath():
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
 
+    def repair_tool_path(self, tool_path):
+        new_tool_path = []
+        segments = []
+        segment = []
+        for tool in tool_path:
+            if tool[2]:
+                segment.append(tool[0])
+                if len(segment) == 2:
+                    segments = self.part.rays.divide_segment(segment)
+                    segment.delete[0]
+            else:
+                segment.append(tool[0])
+                segments = self.part.rays.divide_segment(segment)
+                segment = []
+            if len(segments) > 0:
+                if len(segments) % 2 == 1:
+                    print 'Error: repair toolpath, segments not pair points'
+                for index, point in enumerate(segments):
+                    new_tool_path.append((point, tool[1], not(index % 2)))
+                segments = []
+        return new_tool_path
 
     def get_process_time(self):
         time = 0

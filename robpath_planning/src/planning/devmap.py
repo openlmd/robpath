@@ -123,6 +123,9 @@ class Rays():
         vect = self.ray[1] - self.ray[0]
         self.ray_vector = vect / np.linalg.norm(vect)
         self.instersect_points = np.array([])
+        self.tri_3d_indices = []
+        self.tri_up_indices = []
+        self.tri_down_indices = []
 
     def invert_ray(self):
         self.load_ray(np.array([self.ray_end, self.ray_origin]))
@@ -283,12 +286,12 @@ class Rays():
         else:
             self.invert_ray()
             for index, tri in enumerate(self.triangles):
-                if self.triangle_intersects_ray_2d(tri):
+                distances = self.triangle_intersects_ray_2d(tri)
+                if type(distances) == np.ndarray:
                     indices_b.append(index)
             self.invert_ray()
             self.tri_indices = list(set(indices_a).intersection(indices_b))
-
-        print 'selected in 2D projection :' + str(len(self.tri_indices))
+        logging.info('selected in 2D projection :' + str(len(self.tri_indices)))
 
     def select_3d_triangles(self):
         '''Select triangles intersected by a ray in 3D space'''
@@ -296,11 +299,11 @@ class Rays():
             if self.triangle_intersects_ray(tri):
                 self.tri_3d_indices.append(self.tri_indices[index])
             else:
-                'Test if triangle is Up or Down the ray'
+                # 'Test if triangle is Up or Down the ray'
                 if self.ray_vector[0]:
                     t = (tri[0][0] - self.ray_origin[0]) / self.ray_vector[0]
                 else:
-                    'Ray paralel to Y axis'
+                    # 'Ray paralel to Y axis'
                     t = (tri[0][1] - self.ray_origin[1]) / self.ray_vector[1]
                 z_ray = self.ray_origin[2] + self.ray_vector[2] * t
                 if tri[0][2] > z_ray:
@@ -308,7 +311,7 @@ class Rays():
                 else:
                     self.tri_down_indices.append(self.tri_indices[index])
         self.instersect_points = self.instersect_points.reshape((len(self.instersect_points)/4,4))
-        print 'selected in 3D space: ' + str(len(self.tri_3d_indices))
+        logging.info('selected in 3D space: ' + str(len(self.tri_3d_indices)))
 
     def order_points_distance(self, points=None, origin=None):
         '''Order points, from nearest to origin point'''
@@ -336,6 +339,8 @@ class Rays():
         if len(line) % 2 == 1:
             line.append(self.ray_end)
         lines = np.array(line)
+        if len(lines) % 2 == 1:
+            print 'Error getting segments'
         self.segments = lines
 
     def divide_segment(self, segment):
