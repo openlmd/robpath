@@ -15,10 +15,14 @@ class Rapid():
         self.speed_t = 50
         self.travel_zone = 'z0'
 
-        #self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0.0, -0.70711, 0.0]] # Tool pose
-        self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
-        #self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
-        self.workobject = [[1255, -87, 1032], [1, 0, 0, 0]] # Work Object pose 60
+        self.tool = [[351.106, -36.6277, 86.9243], [0.73432, 0, -0.6788, 0]] # Tool pose
+        #self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
+        self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
+        #self.workobject = [[1255, -87, 1032], [1, 0, 0, 0]] # Work Object pose 60
+
+        self.offset = 5
+        self.offset_z = 5
+        self.start_lag = 0.2
 
         self.laser_type = 'trudisk'
         self.feeder_type = 'gtv'
@@ -156,10 +160,19 @@ class Rapid():
             LASER_TEMPLATE += '    Reset TdoExtActiv;'
         return LASER_TEMPLATE
 
-    def rapid_feeder_conf(self):
+    def rapid_feeder_conf(self, module_name='Robpath'):
         FEEDER_TEMPLATE = '    Set DoRootGas;\n'
-        FEEDER_TEMPLATE += 'Set DoWeldGas;\n'
-        if self.feeder_type == 'medicoat':
+        if self.feeder_type == 'tps5000':
+            FEEDER_TEMPLATE += 'Set DoCossJet;\n'
+            FEEDER_TEMPLATE += 'PulseDO\PLength:=0.5,doTPSReset;\n'
+            FEEDER_TEMPLATE += 'Set doTPSReady;\n'
+            FEEDER_TEMPLATE += 'Set doTPSOP0;\n'
+            FEEDER_TEMPLATE += 'Reset doTPSOP1;\n'
+            FEEDER_TEMPLATE += 'Set doTPSOP2;\n'
+            FEEDER_TEMPLATE += '!SetGO GoTPSJobL, 100;\n'
+            FEEDER_TEMPLATE += 'TriggEquip wireON'+module_name+', 0 \Start, 0 \DOp:=doTPSWireF, 1;\n'
+            FEEDER_TEMPLATE += 'TriggEquip wireOFF'+module_name+', 0, 0 \DOp:=doTPSWireF, 0;\n'
+        elif self.feeder_type == 'medicoat':
             FEEDER_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
             FEEDER_TEMPLATE += '    MedicoatL1 "OFF", %(carrier)i, %(stirrer)i, %(turntable)i;'
         elif self.feeder_type == 'gtv':
@@ -175,10 +188,11 @@ class Rapid():
         FEEDER_TEMPLATE = ''
         if self.feeder_type == 'medicoat':
             FEEDER_TEMPLATE += 'Reset doMdtPL2On;\n'
-            FEEDER_TEMPLATE += '    Reset doMdtPL1On;\n'
+            FEEDER_TEMPLATE += 'Reset doMdtPL1On;\n'
         elif self.feeder_type == 'gtv':
             FEEDER_TEMPLATE += 'Reset doGTV_StartExtern;\n'
-        FEEDER_TEMPLATE += '    Reset DoWeldGas;\n'
+        elif self.feeder_type == 'tps5000':
+            FEEDER_TEMPLATE += '    Reset DoCossJet;\n'
         FEEDER_TEMPLATE += '    Reset DoRootGas;\n'
         return FEEDER_TEMPLATE
 
@@ -193,22 +207,27 @@ class Rapid():
                 RAPID_TEMPLATE += line
         return RAPID_TEMPLATE
 
-    def path2rapid_beta(self, path, module_name ='Robpath'):
+    def path2rapid_beta(self, path, module_name='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
-        #TODO: Get powder and laser parameters
+        # TODO: Get powder and laser parameters
 
-        if laser == 'rofin_rf':
+        if self.laser_type == 'rofin_rf':
             laser_out = 'Do_RF_ExterGate'
-        elif laser == 'trudisk':
+        elif self.laser_type == 'trudisk':
             laser_out = 'TdoPStartStat'
 
         laser_conf = self.rapid_laser_conf()
-        feeder_conf = self.rapid_feeder_conf()
+        feeder_conf = self.rapid_feeder_conf(module_name)
         laser_stop = self.rapid_laser_stop()
         feeder_stop = self.rapid_feeder_stop()
 
         RAPID_TEMPLATE = self.load_template()
+
+        feeder_triggs = ''
+        if self.feeder_type == 'tps5000':
+            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireON%s;' % (module_name)])
+            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireOFF%s;' % (module_name)])
 
         # Target points definition
         targets = ''
@@ -221,39 +240,54 @@ class Rapid():
         laser_set = False
         return_track = False
         p_ant, q_ant, process_ant = None, None, None
-        dir_x_pos = True
+        self.offset_x = 0
+        self.offset_y = 0
         for k in range(len(path)):
             p, q, process = path[k]
             if return_track:
-                if dir_x_pos:
-                    pass
-                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                else:
-                    pass
-                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                    #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
                 return_track = False
             if laser_track and process:
                 if not laser_set:
                     moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                    if self.feeder_type == 'tps5000':
+                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
+                        moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
                     laser_set = True
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             elif laser_track and not process:
                 if laser_set:
                     laser_set = False
                     moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                    moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
-                else:
-                    moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
-                    if p_ant[1] < p[1]:
-                        dir_x_pos = True
-                        moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, 10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                        #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    if self.feeder_type == 'tps5000':
+                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
                     else:
-                        dir_x_pos = False
-                        moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, 0, -10, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                        #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, -30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                else:
+                    if self.feeder_type == 'tps5000':
+                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
+                        moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
+                        moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, fine, %s\WObj:=%s;' % (k, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
+                        #moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s \T3:=wireON%s \T4:=wireOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, module_name, module_name, tool_name, wobj_name)])
+                    else:
+                        moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
+                    if self.offset > 0:
+                        delta_x = p[0] - p_ant[0]
+                        delta_y = p[1] - p_ant[1]
+                        delta_t = delta_x + delta_y
+                        self.offset_x = self.offset * delta_x / delta_t
+                        self.offset_y = self.offset * delta_y / delta_t
+                        if self.feeder_type == 'tps5000':
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, fine, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                        else:
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                            #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    else:
+                        if self.feeder_type == 'tps5000':
+                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                     return_track = True
             elif not laser_track and process:
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
@@ -270,8 +304,9 @@ class Rapid():
                                 'laser_out': laser_out,
                                 'laser_conf': laser_conf,
                                 'laser_stop': laser_stop,
-                                'feeder_conf':feeder_conf,
-                                'feeder_stop':feeder_stop,
+                                'feeder_conf': feeder_conf,
+                                'feeder_stop': feeder_stop,
+                                'feeder_triggs': feeder_triggs,
                                 'tool': tool,
                                 'tool_name': tool_name,
                                 'wobj': wobj,

@@ -20,6 +20,7 @@ class Part(Mesh):
         self.invert_fill_y = True
         self.invert_fill_x = True
         self.invert_control = True
+        self.repair_work = False
 
     def resize_mesh(self, size):
         self.scale(size / self.size)
@@ -84,6 +85,19 @@ class RobPath():
                                 float(punto.find('z').text)])
                     puntos.append(parray)
                 lineas.append(puntos)
+            if line.attrib['tipo'] == 'BuildCutVolume3D':
+                for cut_layers in line.iter('Paths'):
+                    for cut_layer in cut_layers.iter('SubPath'):
+                        for line_3ds in cut_layer.iter('Paths'):
+                            for line_3d in line_3ds.iter('SubPath'):
+                                puntos = []
+                                for punto in line_3d.iter('Punto'):
+                                    parray = np.array([float(punto.find('x').text),
+                                                float(punto.find('y').text),
+                                                float(punto.find('z').text)])
+                                    puntos.append(parray)
+                                lineas.append(puntos)
+
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
@@ -147,7 +161,7 @@ class RobPath():
         self.k = 0
         self.path = []
         self.slices = []
-        self.pair = True
+        self.pair = False
         if self.name is None and len(self.parts) > 0:
             zmin, zmax = self.parts[0].position[2], (self.parts[0].position + self.parts[0].size)[2]
             for part in self.parts:
@@ -155,6 +169,8 @@ class RobPath():
                     zmin = part.position[2]
                 if (part.position + part.size)[2] > zmax:
                     zmax = (part.position + part.size)[2]
+                if part.repair_work:
+                    zmin = part.min_z_repair
             self.levels = self.parts[0].get_zlevels(self.parts[0].track_height, zmin=zmin, zmax=zmax)
         else:
             self.levels = self.part.get_zlevels(self.part.track_height)
@@ -206,6 +222,9 @@ class RobPath():
         degrees = []
         if self.part.invert_fill_y:
             self.part.invert_control = not self.part.invert_control
+        # TODO: Fix contour when zlevel = 0
+        if contour and (self.levels[self.k] < 0.1):
+            self.levels[self.k] = 0.1
         if self.name is None:
             for part in self.parts:
                 slices.append(part.get_slice(self.levels[self.k]))
@@ -220,10 +239,13 @@ class RobPath():
                     tool_path = self.planning.get_path_from_slices(
                         [slice], self.part.track_distance, self.pair, focus=self.part.focus,
                         one_dir=self.part.one_dir_fill, invert=self.part.invert_control, degrees=degrees[n])
+                    if self.part.repair_work:
+                        tool_path = self.repair_tool_path(tool_path)
                     self.path.extend(tool_path)
                 if contour:
                     tool_path = self.planning.get_path_from_slices(
                         [slice], focus=self.part.focus)
+                    #  TODO: Repair
                     self.path.extend(tool_path)
         if self.part.invert_fill_x:
             self.pair = not self.pair
@@ -231,6 +253,27 @@ class RobPath():
         print 'k, levels:', self.k, len(self.levels)
         return tool_path
 
+    def repair_tool_path(self, tool_path):
+        new_tool_path = []
+        segments = []
+        segment = []
+        for tool in tool_path:
+            if tool[2]:
+                segment.append(tool[0])
+                if len(segment) == 2:
+                    segments = self.part.rays.divide_segment(segment)
+                    segment.delete[0]
+            else:
+                segment.append(tool[0])
+                segments = self.part.rays.divide_segment(segment)
+                segment = []
+            if len(segments) > 0:
+                if len(segments) % 2 == 1:
+                    print 'Error: repair toolpath, segments not pair points'
+                for index, point in enumerate(segments):
+                    new_tool_path.append((point, tool[1], not(index % 2)))
+                segments = []
+        return new_tool_path
 
     def get_process_time(self):
         time = 0

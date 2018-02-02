@@ -5,6 +5,7 @@ MODULE %(module_name)s
 
     VAR triggdata laserON%(module_name)s;
     VAR triggdata laserOFF%(module_name)s;
+    %(feeder_triggs)s
 
     CONST speeddata vRobpath:=[%(speed)i,500,5000,1000];
     CONST speeddata vRobpathT:=[%(speed_t)i,500,5000,1000];
@@ -18,18 +19,18 @@ ENDPROC
 PROC main%(module_name)s()
 
     %(laser_conf)s
-    TriggIO laserON%(module_name)s, 0 \Start \DOp:=%(laser_out)s, 1;
-    TriggIO laserOFF%(module_name)s, 0\DOp:=%(laser_out)s, 0;
+    TriggEquip laserON%(module_name)s, 0 \Start, 0 \DOp:=%(laser_out)s, 1;
+    TriggEquip laserOFF%(module_name)s, 0, 0 \DOp:=%(laser_out)s, 0;
 
     %(feeder_conf)s
 
     ConfL \Off;
 
-    MoveJ [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ [[-100.0,-100.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     claddingRobpath;
 
-    MoveJ [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ [[-100.0,-100.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     %(feeder_stop)s
 

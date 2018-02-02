@@ -6,6 +6,7 @@ import numpy as np
 
 import calculate as calc
 import polyline as poly
+from devmap import Rays, DevMap
 
 
 class Mesh:
@@ -16,6 +17,10 @@ class Mesh:
         self.size = np.array([.0, .0, .0])
         # Mesh loading routine
         self.triangles = []
+        self.normals = []
+        self.devmap = DevMap()
+        self.rays = Rays()
+        self.min_z_repair = 0
         if self.load_text_mesh(filename) or self.load_binary_mesh(filename):
             self.bounding_box()
             self.resort_triangles()  # Only for calculation
@@ -27,8 +32,12 @@ class Mesh:
             with open(filename, 'rb') as f:
                 data = f.read(84)  # skip header
                 while data != '':
-                    data = f.read(12)  # skip the normals entirely
-                    if data != '':
+                    normal_strings = [f.read(4), f.read(4), f.read(4)]
+                    if normal_strings[2] != '':
+                        normal = [struct.unpack('f', normal_strings[0])[0],
+                                  struct.unpack('f', normal_strings[1])[0],
+                                  struct.unpack('f', normal_strings[2])[0]]
+                        self.normals.append(normal)
                         tri = np.zeros((3, 3))
                         for j in range(3):
                             for i in range(3):
@@ -70,6 +79,32 @@ class Mesh:
             print "Unable to load text STL"
             return False
         return True
+
+    def load_deviation(self, filename):
+        self.devmap.triangles_coords = self.triangles
+        self.devmap.normals = self.normals
+        self.devmap.load_deviation(filename)
+        self.calculate_vectors()
+        self.calculate_shift_triangles()
+
+    def calculate_vectors(self):
+        self.devmap.calculate_vectors()
+
+    def calculate_shift_triangles(self):
+        self.devmap.calculate_shift_triangles()
+        self.min_z_repair = np.array(self.devmap.shift_triangles)[:, :, 2].min()
+        print 'Zmin to repair: ' + str(self.min_z_repair)
+        print 'triangels:'
+        print np.array(self.devmap.shift_triangles)
+        print 'list'
+        print self.devmap.shift_triangles
+        self.rays.load_triangles(self.devmap.shift_triangles, delaunay=True)
+
+    def save_stl(self, filename):
+        self.devmap.save_stl(filename)
+
+    def divide_segment(self, segment):
+        return self.rays.divide_segment(segment)
 
     def bounding_box(self):
         b1 = [10000, 10000, 10000]
@@ -115,6 +150,8 @@ class Mesh:
     def get_zlevels(self, zdist, zmin=None, zmax=None):
         if zmin is None and zmax is None:
             zmin, zmax = self.position[2], (self.position + self.size)[2]
+        if self.min_z_repair > 0:
+            zmin = self.min_z_repair
         print 'Zmin, Zmax:', zmin, zmax
         n_vals = np.round((zmax - zmin) / zdist)
         i_min = zmin #((zmax + zmin) - (n_vals * zdist)) / 2
@@ -160,6 +197,14 @@ class Mesh:
                 unsorted_lines.append(intersection)
             elif (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
                 print "WARNING: Triangle in z_level!"
+        roll_point = 0
+        xy_dist = unsorted_lines[0][0][0] + unsorted_lines[0][0][1]
+        for n_line in range(len(unsorted_lines)):
+            for point in unsorted_lines[n_line]:
+                d = point[0] + point[1]
+                if d < xy_dist:
+                    roll_point = n_line
+                    xy_dist = d
         if not unsorted_lines == []:
             # Arrange the line segments so that each segment leads to the
             # nearest available segment. This is accomplished by using two
@@ -168,9 +213,9 @@ class Mesh:
             # sorted pile.
             epsilon = 1e-9
             polygons = []
-            point1, point2 = unsorted_lines[0]
-            polygon = [point1, point2]
-            unsorted_lines.pop(0)
+            point1, point2 = unsorted_lines[roll_point]
+            polygon = [point2, point1]
+            unsorted_lines.pop(roll_point)
             while unsorted_lines:
                 last_point = polygon[-1]
                 do_flip, new_line = False, True
@@ -194,6 +239,8 @@ class Mesh:
                     else:
                         if not (calc.distance2(polygon[-1], point2) < epsilon):
                             polygon.append(point2)
+            # polygon = polygon[roll_point:] + polygon[:roll_point]
+            # polygon.reverse()
             polygons.append(np.array(polygon))
             return [poly.filter_polyline(polygon, dist=0.1) for polygon in polygons]  # Polygons filter
         else:

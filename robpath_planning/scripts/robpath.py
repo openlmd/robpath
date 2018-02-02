@@ -192,6 +192,9 @@ class RobPathUI(QtGui.QMainWindow):
                     QtGui.QMessageBox.NoButton)
         else:
             self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
+        self.rapid.offset = self.settings["configuration"]["offsets"]["line"]
+        self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
+        self.robpath.planning.start_point = self.settings["configuration"]["start_point"]
 
     def saveSettings(self):
         print 'save'
@@ -288,7 +291,7 @@ class RobPathUI(QtGui.QMainWindow):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
                 self.plot, 'Open file', self.dirname,
-                'Mesh Files (*.stl);; Process file (*xml)')
+                'Mesh Files (*.stl);; Process file (*xml);; Deviation map (*cmr)')
             if filename:
                 if filename.split('.')[-1] == 'stl':
                     self.enableParts(True)
@@ -303,10 +306,17 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
                     self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
                     self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
+                elif filename.split('.')[-1] == 'cmr':
+                    # TODO: Check if part exists
+                    self.robpath.part.load_deviation(filename)
+                    self.robpath.part.repair_work = True
+                    self.robpath.part.save_stl('surface_robpath.stl')
+                    self.robpath.part.devmap.save_stl('surface_robpath_delaunay.stl', self.robpath.part.rays.triangles)
                 else:
                     self.robpath.load_xml(filename)
                     self.new_xml = True
                     self.timer.start(100)
+                    self.btnSaveRapid.setEnabled(True)
 
         except AttributeError as error:
             print error
@@ -400,7 +410,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
-        self.rapid.upload_file(filename, directory)
+        #self.rapid.upload_file(filename, directory)
         print routine
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
