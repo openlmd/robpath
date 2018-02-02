@@ -1,18 +1,19 @@
 {
   "configuration": {
-    "feeder_type": "gtv",
-    "height": 0.6,
+    "feeder_type": "tps5000",
+    "height": 1.6,
     "laser_type": "trudisk",
     "offsets": {
       "line": 3,
       "z_dir": 3
     },
     "overlap": 0.0,
-    "process_speed": 8.0,
+    "process_speed": 15.0,
     "robot": "abb",
     "stop_layer": 1,
     "travel_speed": 25.0,
-    "width": 2.5
+    "width": 1.89,
+    "start_point": "max"
   },
   "limits": {
     "feeder_type": [
@@ -27,6 +28,10 @@
     "robot": [
       "abb",
       "kuka"
+    ],
+    "start_point": [
+      "max",
+      "min"
     ]
   }
 }
