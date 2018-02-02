@@ -194,6 +194,7 @@ class RobPathUI(QtGui.QMainWindow):
             self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
         self.rapid.offset = self.settings["configuration"]["offsets"]["line"]
         self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
+        self.robpath.planning.start_point = self.settings["configuration"]["start_point"]
 
     def saveSettings(self):
         print 'save'

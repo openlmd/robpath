@@ -6,7 +6,10 @@ import calculate as calc
 
 class Planning:
     def __init__(self):
-        self.orientation = np.array((0.0, 0.0, 0.0, 1.0))
+        # self.orientation = np.array((0.0, 0.0, 0.0, 1.0))
+        self.orientation = np.array((-0.113, 0.0, 0.0, 0.994))  # Cabezal de fio (-0.168924, 0.0, 0.0, 0.985627)
+        self.printtest = True
+        self.start_point = 'max'
 
     def get_range_values(self, v_min, v_max, v_dist):
         n_vals = np.round(((v_max - v_min) + v_dist) / v_dist)
@@ -25,7 +28,7 @@ class Planning:
     def get_grated(self, slice, dist, one_dir=False, invert=False, degrees=0.0):
         dist = dist - 1e-9
         fill_lines = []
-        if degrees == 90.0 or degrees == 270.0:
+        if degrees == 90.0 or degrees == 270.0 or degrees == -90:
             degrees = degrees + 0.1
             #TODO: Correxir bug con 90 grados
         m, b = None, None
@@ -117,6 +120,11 @@ class Planning:
                     path.append([contour[-1], self.orientation, False])
                 else:
                     fill_lines = self.get_grated(slice, track_distance, one_dir, invert, degrees)
+                    if self.start_point == 'max':
+                        fill_lines.reverse()
+                        if self.printtest:
+                            self.printtest = False
+                            print 'fill_lines MAX'
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair
