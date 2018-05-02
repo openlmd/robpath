@@ -8,6 +8,7 @@ import calculate as calc
 import polyline as poly
 from devmap import Rays, DevMap
 
+from timeit import default_timer as timer
 
 class Mesh:
     def __init__(self, filename):
@@ -156,7 +157,7 @@ class Mesh:
         n_vals = np.round((zmax - zmin) / zdist)
         i_min = zmin #((zmax + zmin) - (n_vals * zdist)) / 2
         i_max = ((zmax + zmin) + (n_vals * zdist)) / 2
-        return np.arange(i_min, i_max, zdist) + 0.00001
+        return np.arange(i_min, i_max, zdist) + 0.0001
 
     def get_z_intersect(self, triangle, z_level):
         """Gets the intersection line of the plane in Z with the triangle."""
@@ -192,11 +193,17 @@ class Mesh:
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
         for triangle in self.ctriangles:
-            if (triangle[0, 2] < z_level) and (triangle[2, 2] > z_level):
+            if (triangle[2, 2] < z_level) or (triangle[0, 2] > z_level):
+                pass
+            elif (triangle[0, 2] < z_level) and (triangle[2, 2] > z_level):
                 intersection = self.get_z_intersect(triangle, z_level)
                 unsorted_lines.append(intersection)
             elif (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
                 print "WARNING: Triangle in z_level!"
+            elif (triangle[0, 2] <= z_level) and (triangle[1, 2] > z_level):
+                print 'TRIANGULO CON LADO EN Z'
+            elif (triangle[1, 2] < z_level) and (triangle[2, 2] >= z_level):
+                print 'TRIANGULO CON LADO EN Z'
         roll_point = 0
         xy_dist = unsorted_lines[0][0][0] + unsorted_lines[0][0][1]
         for n_line in range(len(unsorted_lines)):
@@ -218,27 +225,64 @@ class Mesh:
             unsorted_lines.pop(roll_point)
             while unsorted_lines:
                 last_point = polygon[-1]
-                do_flip, new_line = False, True
+                do_flip, new_line, reverse_line = False, True, False
                 for i, (point1, point2) in enumerate(unsorted_lines):
+                    close_points = False
+                    if calc.distance2(point1, point2) < epsilon*3:
+                        close_points = True
                     if calc.distance2(last_point, point1) < epsilon:
-                        do_flip, new_line = False, False
+                        if close_points:
+                            if calc.distance2(last_point, point2) < calc.distance2(last_point, point1):
+                                do_flip, new_line, reverse_line = True, False, False
+                                break
+                        do_flip, new_line, reverse_line = False, False, False
                         break
                     if calc.distance2(last_point, point2) < epsilon:
-                        do_flip, new_line = True, False
+                        if close_points:
+                            if calc.distance2(last_point, point1) < calc.distance2(last_point, point2):
+                                do_flip, new_line, reverse_line = False, False, False
+                                break
+                        do_flip, new_line, reverse_line = True, False, False
+                        break
+                    first_point = polygon[0]
+                    if calc.distance2(first_point, point1) < epsilon:
+                        if close_points:
+                            if calc.distance2(first_point, point2) < calc.distance2(first_point, point1):
+                                do_flip, new_line, reverse_line = True, False, True
+                                break
+                        do_flip, new_line, reverse_line = False, False, True
+                        break
+                    if calc.distance2(first_point, point2) < epsilon:
+                        if close_points:
+                            if calc.distance2(first_point, point1) < calc.distance2(first_point, point2):
+                                do_flip, new_line, reverse_line = False, False, True
+                                break
+                        do_flip, new_line, reverse_line = True, False, True
                         break
                     new_line = True
                 point1, point2 = unsorted_lines[i]
                 unsorted_lines.pop(i)
                 if new_line:
-                    polygons.append(np.array(polygon))
+                    if len(polygon) > 2:
+                        polygons.append(np.array(polygon))
+                    else:
+                        print 'ERROR: Poligono con dous puntos'
                     polygon = [point1, point2]
                 else:
                     if do_flip:
-                        if not (calc.distance2(polygon[-1], point1) < epsilon):
-                            polygon.append(point1)
+                        if reverse_line:
+                            if not (calc.distance2(polygon[0], point1) < epsilon):
+                                polygon.insert(0, point1)
+                        else:
+                            if not (calc.distance2(polygon[-1], point1) < epsilon):
+                                polygon.append(point1)
                     else:
-                        if not (calc.distance2(polygon[-1], point2) < epsilon):
-                            polygon.append(point2)
+                        if reverse_line:
+                            if not (calc.distance2(polygon[0], point2) < epsilon):
+                                polygon.insert(0, point2)
+                        else:
+                            if not (calc.distance2(polygon[-1], point2) < epsilon):
+                                polygon.append(point2)
             # polygon = polygon[roll_point:] + polygon[:roll_point]
             # polygon.reverse()
             polygons.append(np.array(polygon))

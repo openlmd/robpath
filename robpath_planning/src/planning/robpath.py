@@ -3,6 +3,7 @@ import json
 import numpy as np
 import calculate as calc
 import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 from mesh import Mesh
 from planning import Planning
@@ -103,6 +104,32 @@ class RobPath():
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
 
+    def save_xml(self, filename, path):
+        top = ET.Element('Programa')
+        comment = ET.Comment('Generado por AIMEN')
+        top.append(comment)
+        tray = ET.SubElement(top, 'Trayectoria')
+        despl = ET.SubElement(tray, 'Desplazamiento')
+        despl.set("tipo", "linea3D")
+        punt = ET.SubElement(despl, 'Punto')
+        orde = 1
+        for k in range(len(path)):
+            p, q, process = path[k]
+            if process:
+                orde = 1
+                despl = ET.SubElement(tray, 'Desplazamiento')
+                despl.set("tipo", "linea3D")
+            else:
+                orde = 2
+            punt = ET.SubElement(despl, 'Punto')
+            children = ET.XML('<root><Orden>%i</Orden><x>%f</x><y>%f</y><z>%f</z></root>' %(orde,p[0],p[1],p[2]))
+            punt.extend(children)
+        rough_string = ET.tostring(top, 'utf-8')
+        reparsed = minidom.parseString(rough_string)
+        filename = 'robpath.xml'
+        with open(filename, 'w') as f:
+            f.writelines(reparsed.toprettyxml(indent="  "))
+
     def select_part(self, name):
         for part in self.parts:
             if part.name == name:
@@ -121,7 +148,19 @@ class RobPath():
         try:
             with open(filename) as data_file:
                 frame_data = json.load(data_file)
-            self.set_base_frame(frame_data['frame']['t'], frame_data['frame']['quat'])
+            if frame_data['frame']['type'] == 'Matrix':
+                t = frame_data['frame']['t']
+                u = frame_data['frame']['u']
+                v = frame_data['frame']['v']
+                w = frame_data['frame']['w']
+                self.base_frame = np.array((
+                    (u[0], v[0], w[0], t[0]),
+                    (u[1], v[1], w[1], t[1]),
+                    (u[2], v[2], w[2], t[2]),
+                    (0.0, 0.0, 0.0, 1.0)
+                    ), dtype=np.float64)
+            else:
+                self.set_base_frame(frame_data['frame']['t'], frame_data['frame']['quat'])
         except IOError as error:
             print error
         except:
@@ -281,7 +320,7 @@ class RobPath():
             length = self.planning.path_length(self.path)
             time = self.planning.path_time(
                 length, self.part.speed, self.part.travel_speed)
-        return time
+        return length[0] / self.part.speed, length[1] / self.part.travel_speed
 
 
 if __name__ == "__main__":

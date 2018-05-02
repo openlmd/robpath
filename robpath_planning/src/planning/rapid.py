@@ -17,8 +17,8 @@ class Rapid():
 
         self.tool = [[351.106, -36.6277, 86.9243], [0.73432, 0, -0.6788, 0]] # Tool pose
         #self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
-        self.workobject = [[1655, -87, 932], [1, 0, 0, 0]] # Work Object pose
-        #self.workobject = [[1255, -87, 1032], [1, 0, 0, 0]] # Work Object pose 60
+        self.workobject = [[1655, -87, 932], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose
+        #self.workobject = [[1255, -87, 1032], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose 60
 
         self.offset = 5
         self.offset_z = 5
@@ -245,6 +245,11 @@ class Rapid():
         for k in range(len(path)):
             p, q, process = path[k]
             if return_track:
+                if p_ant is not None:
+                    if p_ant[2] < p[2]:
+                        moves = '\n'.join([moves, '!SLICE at %f mm' % (p[2])])
+                if self.feeder_type == 'tps5000':
+                    moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
                 moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
                 return_track = False
             if laser_track and process:
@@ -282,6 +287,7 @@ class Rapid():
                         if self.feeder_type == 'tps5000':
                             moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, fine, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                             moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
                         else:
                             moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                             #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])

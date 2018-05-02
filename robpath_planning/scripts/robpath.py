@@ -303,6 +303,7 @@ class RobPathUI(QtGui.QMainWindow):
                     self.updateMeshData(self.robpath.name)
                     self.btnProcessMesh.setEnabled(True)
                     self.robpath.part.filling = self.sbFilling.value()
+                    # TODO: Change to direction and start point
                     self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
                     self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
                     self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
@@ -364,8 +365,11 @@ class RobPathUI(QtGui.QMainWindow):
                 self.processing = False
                 self.timer.stop()
                 self.btnSaveRapid.setEnabled(True)
-                time = self.robpath.get_process_time() / 60
-                time_str = str(round(time,2)) + ' minutos'
+                laser_time, travel_time = self.robpath.get_process_time()
+                time = laser_time + travel_time
+                time_str = (str(round(time / 60, 2)) + ' min:\n'
+                            + str(round(laser_time / 60, 2)) + ' process + '
+                            + str(round(travel_time / 60, 2)) + ' travel')
                 self.labelTime.setText(time_str)
                 n_levels = str(len(self.robpath.levels)) + ' layers'
                 self.labelLevels.setText(n_levels)
@@ -410,11 +414,10 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
+        self.robpath.save_xml('robpath.xml', self.robpath.path)
         #self.rapid.upload_file(filename, directory)
-        print routine
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
-        #TODO: Gardar o xml da udc
 
     def btnQuitClicked(self):
         QtCore.QCoreApplication.instance().quit()
