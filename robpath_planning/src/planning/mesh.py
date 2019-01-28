@@ -8,7 +8,7 @@ import calculate as calc
 import polyline as poly
 from devmap import Rays, DevMap
 
-from timeit import default_timer as timer
+from shapely import geometry, ops
 
 class Mesh:
     def __init__(self, filename):
@@ -157,7 +157,7 @@ class Mesh:
         n_vals = np.round((zmax - zmin) / zdist)
         i_min = zmin #((zmax + zmin) - (n_vals * zdist)) / 2
         i_max = ((zmax + zmin) + (n_vals * zdist)) / 2
-        return np.arange(i_min, i_max, zdist) + 0.0001
+        return np.arange(i_min, i_max, zdist) + 0.001
 
     def get_z_intersect(self, triangle, z_level):
         """Gets the intersection line of the plane in Z with the triangle."""
@@ -189,6 +189,16 @@ class Mesh:
                                       [xb, yb, z_level]])
         return intersect
 
+    def get_roll_point(self, polygon):
+        roll_point = 0
+        xy_dist = np.linalg.norm(polygon[0])
+        for i, point in enumerate(polygon):
+            d = np.linalg.norm(point)
+            if d < xy_dist:
+                roll_point = i
+                xy_dist = d
+        return roll_point
+
     def get_slice(self, z_level):
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
@@ -204,89 +214,37 @@ class Mesh:
                 print 'TRIANGULO CON LADO EN Z'
             elif (triangle[1, 2] < z_level) and (triangle[2, 2] >= z_level):
                 print 'TRIANGULO CON LADO EN Z'
-        roll_point = 0
-        xy_dist = unsorted_lines[0][0][0] + unsorted_lines[0][0][1]
+        doubles = 0
         for n_line in range(len(unsorted_lines)):
-            for point in unsorted_lines[n_line]:
-                d = point[0] + point[1]
-                if d < xy_dist:
-                    roll_point = n_line
-                    xy_dist = d
+            unsorted_lines[n_line] = np.round(unsorted_lines[n_line],5)
+            if np.array_equal(unsorted_lines[n_line][0], unsorted_lines[n_line][1]):
+                doubles = doubles +1
+        if doubles > 0:
+            print 'WARNING: Puntos dobles detectados'
         if not unsorted_lines == []:
             # Arrange the line segments so that each segment leads to the
             # nearest available segment. This is accomplished by using two
             # list of lines, and at each step moving the nearest available
             # line segment from the unsorted pile to the next slot in the
             # sorted pile.
-            epsilon = 1e-9
+            lines = []
+            for line in unsorted_lines:
+                lines.append(geometry.LineString(line))
+            multiline = geometry.MultiLineString(lines)
+            merged_line = ops.linemerge(multiline)
             polygons = []
-            point1, point2 = unsorted_lines[roll_point]
-            polygon = [point2, point1]
-            unsorted_lines.pop(roll_point)
-            while unsorted_lines:
-                last_point = polygon[-1]
-                do_flip, new_line, reverse_line = False, True, False
-                for i, (point1, point2) in enumerate(unsorted_lines):
-                    close_points = False
-                    if calc.distance2(point1, point2) < epsilon*3:
-                        close_points = True
-                    if calc.distance2(last_point, point1) < epsilon:
-                        if close_points:
-                            if calc.distance2(last_point, point2) < calc.distance2(last_point, point1):
-                                do_flip, new_line, reverse_line = True, False, False
-                                break
-                        do_flip, new_line, reverse_line = False, False, False
-                        break
-                    if calc.distance2(last_point, point2) < epsilon:
-                        if close_points:
-                            if calc.distance2(last_point, point1) < calc.distance2(last_point, point2):
-                                do_flip, new_line, reverse_line = False, False, False
-                                break
-                        do_flip, new_line, reverse_line = True, False, False
-                        break
-                    first_point = polygon[0]
-                    if calc.distance2(first_point, point1) < epsilon:
-                        if close_points:
-                            if calc.distance2(first_point, point2) < calc.distance2(first_point, point1):
-                                do_flip, new_line, reverse_line = True, False, True
-                                break
-                        do_flip, new_line, reverse_line = False, False, True
-                        break
-                    if calc.distance2(first_point, point2) < epsilon:
-                        if close_points:
-                            if calc.distance2(first_point, point1) < calc.distance2(first_point, point2):
-                                do_flip, new_line, reverse_line = False, False, True
-                                break
-                        do_flip, new_line, reverse_line = True, False, True
-                        break
-                    new_line = True
-                point1, point2 = unsorted_lines[i]
-                unsorted_lines.pop(i)
-                if new_line:
-                    if len(polygon) > 2:
-                        polygons.append(np.array(polygon))
-                    else:
-                        print 'ERROR: Poligono con dous puntos'
-                    polygon = [point1, point2]
-                else:
-                    if do_flip:
-                        if reverse_line:
-                            if not (calc.distance2(polygon[0], point1) < epsilon):
-                                polygon.insert(0, point1)
-                        else:
-                            if not (calc.distance2(polygon[-1], point1) < epsilon):
-                                polygon.append(point1)
-                    else:
-                        if reverse_line:
-                            if not (calc.distance2(polygon[0], point2) < epsilon):
-                                polygon.insert(0, point2)
-                        else:
-                            if not (calc.distance2(polygon[-1], point2) < epsilon):
-                                polygon.append(point2)
-            # polygon = polygon[roll_point:] + polygon[:roll_point]
-            # polygon.reverse()
-            polygons.append(np.array(polygon))
-            return [poly.filter_polyline(polygon, dist=0.1) for polygon in polygons]  # Polygons filter
+            try:
+                for merged in merged_line:
+                    polygons.append(np.array(merged))
+            except TypeError:
+                # If there is only one contour
+                polygons.append(np.array(merged_line))
+            # for i, polygon in enumerate(polygons):
+            #     roll_point = self.get_roll_point(polygon)
+            #     if roll_point != 0:
+            #         polygons[i] = polygon[roll_point:] + polygon[:roll_point]
+            #     print 'Roll point: ' + str(roll_point)
+            return [poly.filter_polyline(polygon, dist=0.05) for polygon in polygons]  # Polygons filter
         else:
             return None
 
@@ -298,7 +256,7 @@ class Mesh:
         for k, z_level in enumerate(levels):
             slices.append(self.get_slice(z_level))
             t1 = time.time()
-            print '[%.2f%%] Time to slice %.3f s.' % ((100.0 * (k + 1)) / len(levels), t1 - t0)
+            print '[%.2f%%] Time to slice at %.1fmm %.3f s.' % ((100.0 * (k + 1)) / len(levels), z_level, t1 - t0)
         return slices
 
 

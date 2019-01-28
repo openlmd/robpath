@@ -13,7 +13,8 @@
     "stop_layer": 1,
     "travel_speed": 35.0,
     "width": 2.16,
-    "start_point": "min"
+    "start_point": "min",
+    "disparity": "filling"
   },
   "limits": {
     "feeder_type": [
@@ -32,6 +33,10 @@
     "start_point": [
       "max",
       "min"
+    ],
+    "disparity": [
+      "coating",
+      "filling"
     ]
   }
 }

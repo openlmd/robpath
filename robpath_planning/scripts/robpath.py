@@ -178,6 +178,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
         self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
         self.stop_layer = self.settings["configuration"]["stop_layer"]
+        self.disparity_work = self.settings["configuration"]["disparity"]
         if not self.settings["configuration"]["laser_type"] in self.settings["limits"]["laser_type"]:
             QtGui.QMessageBox.warning(self, "Cannot configure laser",
                     "The selected laser type is not implemented.",
@@ -318,6 +319,15 @@ class RobPathUI(QtGui.QMainWindow):
                     self.new_xml = True
                     self.timer.start(100)
                     self.btnSaveRapid.setEnabled(True)
+                    length = self.robpath.planning.path_length(self.robpath.path)
+                    laser_time = length[0] / self.sbSpeed.value()
+                    travel_time = length[1] / self.sbTravel.value()
+                    time = laser_time + travel_time
+                    time_str = (str(round(time / 60, 2)) + ' min:\n'
+                                + str(round(laser_time / 60, 2)) + ' process + '
+                                + str(round(travel_time / 60, 2)) + ' travel')
+                    print time_str
+                    self.labelTime.setText(time_str)
 
         except AttributeError as error:
             print error
@@ -360,7 +370,15 @@ class RobPathUI(QtGui.QMainWindow):
                 #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
                 self.plot.drawPath(self.robpath.path, self.robpath.part.color)
                 self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
-                self.btnSaveRapid.setEnabled(False)
+                self.btnSaveRapid.setEnabled(True)
+                laser_time, travel_time = self.robpath.get_process_time()
+                time = laser_time + travel_time
+                time_str = (str(round(time / 60, 2)) + ' min:\n'
+                            + str(round(laser_time / 60, 2)) + ' process + '
+                            + str(round(travel_time / 60, 2)) + ' travel')
+                self.labelTime.setText(time_str)
+                n_levels = str(len(self.robpath.levels)) + ' layers'
+                self.labelLevels.setText(n_levels)
             else:
                 self.processing = False
                 self.timer.stop()
@@ -394,6 +412,9 @@ class RobPathUI(QtGui.QMainWindow):
             msg.setStandardButtons(QtGui.QMessageBox.Ok)
             retval = msg.exec_()
             return
+        if self.robpath.part.repair_work and self.disparity_work == "coating":
+            self.btnCoatFaceClicked()
+            return
         if self.processing:
             self.timer.stop()
             self.processing = False
@@ -405,6 +426,13 @@ class RobPathUI(QtGui.QMainWindow):
             self.robpath.init_process()
             self.processing = True
             self.timer.start(100)
+
+    def btnCoatFaceClicked(self):
+        ''' Get path for coating the upside face '''
+        self.robpath.init_coating()
+        self.plot.drawWorkingArea()
+        self.plot.drawPath(self.robpath.path, self.robpath.part.color)
+        self.btnSaveRapid.setEnabled(True)
 
     def btnSaveRapidClicked(self):
         filename = 'robpath.mod'

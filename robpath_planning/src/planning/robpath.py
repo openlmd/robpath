@@ -109,9 +109,8 @@ class RobPath():
         comment = ET.Comment('Generado por AIMEN')
         top.append(comment)
         tray = ET.SubElement(top, 'Trayectoria')
-        despl = ET.SubElement(tray, 'Desplazamiento')
-        despl.set("tipo", "linea3D")
-        punt = ET.SubElement(despl, 'Punto')
+        despl = None
+        punt = None
         orde = 1
         for k in range(len(path)):
             p, q, process = path[k]
@@ -214,6 +213,89 @@ class RobPath():
         else:
             self.levels = self.part.get_zlevels(self.part.track_height)
         return self.levels
+
+    def init_coating(self):
+        from scipy.spatial import cKDTree
+        self.path = []
+        coating_start_point = np.array(self.part.position)
+        coating_size = np.array(self.part.size)
+        coating_direction = np.array([1.0, 0.0, 0.0])
+        coating_distance = 5.0
+        coating_start_point = coating_start_point + coating_direction * coating_distance
+        triangles = self.part.devmap.shift_triangles # self.part.rays.triangles
+        print 'INTIT COAT'
+        print coating_start_point
+        print coating_size
+        track_points = np.array(self.get_coating_track(coating_start_point, coating_direction, triangles))
+        print 'Track:'
+        print len(track_points)
+        print '----'
+        tree = cKDTree(track_points)
+        rows_to_fuse = tree.query_pairs(r=0.01, output_type='ndarray')
+        print 'Puntos para fusionar: ' + str(len(rows_to_fuse))
+        print rows_to_fuse
+        print '----'
+        ind = np.lexsort((track_points[:,1],track_points[:,0]))
+        print track_points
+        print '----'
+        ordered_track = track_points[ind]
+        print ordered_track
+        print '----'
+        max_distance = 20.0
+        break_points = []
+        min_distance = 0.1
+        discarted_points = []
+        for n in range(len(ordered_track)-1):
+            dist = np.absolute(np.linalg.norm(ordered_track[n+1]-ordered_track[n]))
+            if dist > max_distance:
+                break_points.append(n)
+#TODO: separar os cordons antes de descartar puntos cercanos
+        tool_paths = []
+        if len(break_points) == 0:
+            tool_path = self.planning.get_path_from_coating_track(ordered_track)
+            tool_paths.append(tool_path)
+        else:
+            print 'Break_points:'
+            print len(break_points)
+            print break_points
+            for break_point in range(len(break_points)):
+                if break_point == 0:
+                    tool_path = self.planning.get_path_from_coating_track(ordered_track[:break_points[break_point]])
+                    tool_paths.append(tool_path)
+                elif break_points[break_point] - break_points[break_point-1] < 3:
+                    pass
+                else:
+                    tool_path = self.planning.get_path_from_coating_track(ordered_track[break_points[break_point-1]+1:break_points[break_point]])
+                    tool_paths.append(tool_path)
+            tool_path = self.planning.get_path_from_coating_track(ordered_track[break_points[-1]+1:])
+            tool_paths.append(tool_path)
+#TODO: aqui filtrar os puntos cercanos
+        for tool_path in tool_paths:
+            self.path.extend(tool_path)
+
+    def get_coating_track(self, plane_point, plane_normal, triangles):
+        # TODO: Pasar a planning ou clase que corresponda
+        track_points = []
+        for triangle in triangles:
+            sideness_A = np.dot(plane_normal, np.array(triangle[0]) - plane_point)
+            sideness_B = np.dot(plane_normal, np.array(triangle[1]) - plane_point)
+            sideness_C = np.dot(plane_normal, np.array(triangle[2]) - plane_point)
+            if sideness_A * sideness_B < 0:
+                # Punto de corte con segmento 0,1
+                r = np.dot(plane_normal, plane_point - np.array(triangle[0])) / np.dot(plane_normal, np.array(triangle[1]) - np.array(triangle[0]))
+                p = np.array(triangle[0]) + r * (np.array(triangle[1]) - np.array(triangle[0]))
+                track_points.append(p)
+            if sideness_A * sideness_C < 0:
+                # Punto de corte con segmento 0,2
+                r = np.dot(plane_normal, plane_point - np.array(triangle[0])) / np.dot(plane_normal, np.array(triangle[2]) - np.array(triangle[0]))
+                p = np.array(triangle[0]) + r * (np.array(triangle[2]) - np.array(triangle[0]))
+                track_points.append(p)
+            if sideness_B * sideness_C < 0:
+                # Punto de corte con segmento 1,2
+                r = np.dot(plane_normal, plane_point - np.array(triangle[1])) / np.dot(plane_normal, np.array(triangle[2]) - np.array(triangle[1]))
+                p = np.array(triangle[1]) + r * (np.array(triangle[2]) - np.array(triangle[1]))
+                track_points.append(p)
+        return track_points
 
     def update_process(self, filled=True, contour=False):
         tool_path = []

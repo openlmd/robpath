@@ -1203,7 +1203,7 @@ border: 1px solid gray;</string>
          <string/>
         </property>
         <!-- <property name="pixmap">
-         <pixmap>AMable_logo-text_blue_pos_v0200.png</pixmap>
+         <pixmap>outro_logo.jpg</pixmap>
         </property> -->
        </widget>
       </item>
