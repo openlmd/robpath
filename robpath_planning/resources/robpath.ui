@@ -1202,9 +1202,9 @@ border: 1px solid gray;</string>
         <property name="text">
          <string/>
         </property>
-        <property name="pixmap">
-         <pixmap>r.png</pixmap>
-        </property>
+        <!-- <property name="pixmap">
+         <pixmap>outro_logo.jpg</pixmap>
+        </property> -->
        </widget>
       </item>
      </layout>

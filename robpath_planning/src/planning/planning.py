@@ -12,10 +12,12 @@ class Planning:
         self.start_point = 'max'
 
     def get_range_values(self, v_min, v_max, v_dist):
-        n_vals = np.round(((v_max - v_min) + v_dist) / v_dist)
+        # Actualizar que o v_min empeze durante todo o proceso no mesmo valor
+        '''n_vals = np.round(((v_max - v_min) + v_dist) / v_dist)
         i_min = ((v_max + v_min) - (n_vals * v_dist)) / 2
-        i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2
-        return np.arange(i_min, i_max + v_dist, v_dist)
+        i_max = ((v_max + v_min) + (n_vals * v_dist)) / 2'''
+        # return np.arange(v_min - v_dist * 0.5, v_max + v_dist * 1.5, v_dist)
+        return np.arange(v_max + v_dist * 1.5, v_min - v_dist * 0.5, -v_dist)
 
     def get_min_max(self, poly, degrees):
         '''Gets the outer points from a plygon crossed by a stright line'''
@@ -86,7 +88,7 @@ class Planning:
             lines.append(line)
         return lines
 
-    def get_path_from_fill_lines(self, fill_lines):
+    def get_path_from_fill_lines_old(self, fill_lines):
         tool_path = []
         for line in fill_lines:
             for k in range(0, len(line), 2):
@@ -101,6 +103,15 @@ class Planning:
                 else:
                     tool_path.append([pnt1, self.orientation, True])
                     tool_path.append([pnt2, self.orientation, False])
+        return tool_path
+
+    def get_path_from_fill_lines(self, fill_lines):
+        tool_path = []
+        for track in fill_lines:
+            if len(track) > 1:
+                for k in range(0, len(track)-1):
+                    tool_path.append([track[k], self.orientation, True])
+                tool_path.append([track[-1], self.orientation, False])
         return tool_path
 
     def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False, degrees=None):
@@ -160,23 +171,29 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str,
-                        default='../../data/piece7.stl',
+                        default='/home/baltasar/Documentos/celda4/proper/tacos gnc/taco.stl',#/home/baltasar/Documentos/proper/points datapixel/P1DevMap/P1ModelDevMap.stl /home/baltasar/Documentos/celda4/proper/tacos gnc/taco.stl
                         help='path to input stl data file')
     args = parser.parse_args()
     filename = args.data
 
     # Triangle mesh is composed by a set of faces (triangles)
     mesh = Mesh(filename)
+    mesh.resort_triangles()
 
-    t0 = time.time()
-    slices = mesh.get_mesh_slices(0.5)
-    t1 = time.time()
-    print 'Time for slices:', t1 - t0
+    slice = mesh.get_slice(7.98)
+    # t0 = time.time()
+    # slices = mesh.get_mesh_slices(0.5)
+    # t1 = time.time()
+    # print 'Time for slices:', t1 - t0
+    slices = []
+    slices.append(slice)
+    fp = slice[0][0]
+    lp = slice[0][-1]
 
     planning = Planning()
 
     t0 = time.time()
-    path = planning.get_path_from_slices(slices, 1.0)
+    path = planning.get_path_from_slices(slices, 2.16, degrees=45.0)
     t1 = time.time()
     print 'Time for path:', t1 - t0
 
@@ -195,6 +212,6 @@ if __name__ == '__main__':
 
     mplot3d = MPlot3D()
     #mplot3d.draw_mesh(mesh)
-    #mplot3d.draw_slices(slices)
+    mplot3d.draw_slices(slices)
     mplot3d.draw_path(path)
     mplot3d.show()

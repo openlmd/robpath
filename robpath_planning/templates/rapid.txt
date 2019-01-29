@@ -26,11 +26,11 @@ PROC main%(module_name)s()
 
     ConfL \Off;
 
-    MoveJ [[-100.0,-100.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ Offs(Trobpath0, 0, 0, 15.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     claddingRobpath;
 
-    MoveJ [[-100.0,-100.0,100.0],[1.0,0.0,0.0,0.0],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveJ Offs(Trobpath0, 0, 0, 60.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     %(feeder_stop)s
 

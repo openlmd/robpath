@@ -1,7 +1,7 @@
 {
   "configuration": {
     "feeder_type": "tps5000",
-    "height": 1.6,
+    "height": 1.07,
     "laser_type": "trudisk",
     "offsets": {
       "line": 3,
@@ -11,9 +11,10 @@
     "process_speed": 15.0,
     "robot": "abb",
     "stop_layer": 1,
-    "travel_speed": 25.0,
-    "width": 1.89,
-    "start_point": "max"
+    "travel_speed": 35.0,
+    "width": 2.16,
+    "start_point": "min",
+    "disparity": "filling"
   },
   "limits": {
     "feeder_type": [
@@ -32,6 +33,10 @@
     "start_point": [
       "max",
       "min"
+    ],
+    "disparity": [
+      "coating",
+      "filling"
     ]
   }
 }
