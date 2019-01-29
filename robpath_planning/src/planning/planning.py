@@ -88,7 +88,7 @@ class Planning:
             lines.append(line)
         return lines
 
-    def get_path_from_fill_lines(self, fill_lines):
+    def get_path_from_fill_lines_old(self, fill_lines):
         tool_path = []
         for line in fill_lines:
             for k in range(0, len(line), 2):
@@ -103,6 +103,15 @@ class Planning:
                 else:
                     tool_path.append([pnt1, self.orientation, True])
                     tool_path.append([pnt2, self.orientation, False])
+        return tool_path
+
+    def get_path_from_fill_lines(self, fill_lines):
+        tool_path = []
+        for track in fill_lines:
+            if len(track) > 1:
+                for k in range(0, len(track)-1):
+                    tool_path.append([track[k], self.orientation, True])
+                tool_path.append([track[-1], self.orientation, False])
         return tool_path
 
     def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False, degrees=None):

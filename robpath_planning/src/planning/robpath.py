@@ -77,32 +77,62 @@ class RobPath():
         self.path = []
         lineas = []
         tool_path = []
-        for line in root.iter('Desplazamiento'):
-            if line.attrib['tipo'] == 'linea3D':
-                puntos = []
-                for punto in line.iter('Punto'):
-                    parray = np.array([float(punto.find('x').text),
-                                float(punto.find('y').text),
-                                float(punto.find('z').text)])
-                    puntos.append(parray)
-                lineas.append(puntos)
-            if line.attrib['tipo'] == 'BuildCutVolume3D':
-                for cut_layers in line.iter('Paths'):
-                    for cut_layer in cut_layers.iter('SubPath'):
-                        for line_3ds in cut_layer.iter('Paths'):
-                            for line_3d in line_3ds.iter('SubPath'):
-                                puntos = []
-                                for punto in line_3d.iter('Punto'):
-                                    parray = np.array([float(punto.find('x').text),
-                                                float(punto.find('y').text),
-                                                float(punto.find('z').text)])
-                                    puntos.append(parray)
-                                lineas.append(puntos)
-
+        if root.tag == 'Programa':
+            for line in root.iter('Desplazamiento'):
+                if line.attrib['tipo'] == 'linea3D':
+                    puntos = []
+                    for punto in line.iter('Punto'):
+                        parray = np.array([float(punto.find('x').text),
+                                    float(punto.find('y').text),
+                                    float(punto.find('z').text)])
+                        puntos.append(parray)
+                    lineas.append(puntos)
+                if line.attrib['tipo'] == 'BuildCutVolume3D':
+                    for cut_layers in line.iter('Paths'):
+                        for cut_layer in cut_layers.iter('SubPath'):
+                            for line_3ds in cut_layer.iter('Paths'):
+                                for line_3d in line_3ds.iter('SubPath'):
+                                    puntos = []
+                                    for punto in line_3d.iter('Punto'):
+                                        parray = np.array([float(punto.find('x').text),
+                                                    float(punto.find('y').text),
+                                                    float(punto.find('z').text)])
+                                        puntos.append(parray)
+                                    lineas.append(puntos)
+        elif root.tag == 'program':
+            for part in root:
+                if part.tag == 'part':
+                    for layer in part:
+                        if layer.tag == 'layer':
+                            for laserTrack in layer:
+                                if laserTrack.tag == 'laserTrack':
+                                    puntos = []
+                                    for point in laserTrack:
+                                        if point.tag == 'point':
+                                            parray = np.array([float(point.attrib['x']),
+                                                    float(point.attrib['y']),
+                                                    float(point.attrib['z'])])
+                                            puntos.append(parray)
+                                    lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
+        '''print self.path:
+        [(array([0.45, 0.45, 0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
+        (array([50.45,  0.45,  0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), False), 
+        (array([ 0.45, 50.45,  0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
+        (array([50.45, 50.45,  0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
+        (array([70.45, 60.45,  0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), False), 
+        (array([90.45, 90.45,  1.46]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
+        (array([ 0.45, 90.45,  1.46]), array([-0.113,  0.   ,  0.   ,  0.994]), False)]
+        '''
+        
+    def save_xml_to_file(self, filename, top):
+        rough_string = ET.tostring(top, 'utf-8')
+        reparsed = minidom.parseString(rough_string)
+        with open(filename, 'w') as f:
+            f.writelines(reparsed.toprettyxml(indent="  "))
 
     def save_xml(self, filename, path):
         top = ET.Element('Programa')
@@ -123,11 +153,30 @@ class RobPath():
             punt = ET.SubElement(despl, 'Punto')
             children = ET.XML('<root><Orden>%i</Orden><x>%f</x><y>%f</y><z>%f</z></root>' %(orde,p[0],p[1],p[2]))
             punt.extend(children)
-        rough_string = ET.tostring(top, 'utf-8')
-        reparsed = minidom.parseString(rough_string)
-        filename = 'robpath.xml'
-        with open(filename, 'w') as f:
-            f.writelines(reparsed.toprettyxml(indent="  "))
+        self.save_xml_to_file('robpath.xml', top)
+        self.save_xml_new(filename, path)
+
+    def save_xml_new(self, filename, path):
+        top = ET.Element('program')
+        comment = ET.Comment('Generado por AIMEN')
+        top.append(comment)
+        part = ET.SubElement(top, 'part')
+        h = -10.0
+        layer = None
+        track = None
+        for k in range(len(path)):
+            p, q, process = path[k]
+            if h < p[2]:
+                h = p[2]
+                layer = ET.SubElement(part, 'layer')
+                track = ET.SubElement(layer, 'laserTrack')
+            point = ET.SubElement(track, 'point')
+            point.set('x', str(p[0]))
+            point.set('y', str(p[1]))
+            point.set('z', str(p[2]))
+            if not process:
+                track = ET.SubElement(layer, 'laserTrack')
+        self.save_xml_to_file('robpath_new.xml', top)
 
     def select_part(self, name):
         for part in self.parts:

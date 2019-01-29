@@ -314,7 +314,7 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.part.repair_work = True
                     self.robpath.part.save_stl('surface_robpath.stl')
                     self.robpath.part.devmap.save_stl('surface_robpath_delaunay.stl', self.robpath.part.rays.triangles)
-                else:
+                elif filename.split('.')[-1] == 'xml':
                     self.robpath.load_xml(filename)
                     self.new_xml = True
                     self.timer.start(100)
