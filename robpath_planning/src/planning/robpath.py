@@ -127,7 +127,55 @@ class RobPath():
         (array([90.45, 90.45,  1.46]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
         (array([ 0.45, 90.45,  1.46]), array([-0.113,  0.   ,  0.   ,  0.994]), False)]
         '''
-        
+
+    def load_gcode(self, filename):
+        import pygcode
+        from pygcode import Line
+        z = 0.0
+        x = 0.0
+        y = 0.0
+        self.path = []
+        puntos = []
+        lineas = []
+        tool_path = []
+        with open(filename, 'r') as fh:
+            for line_text in fh.readlines():
+                line = Line(line_text)
+                extrude_move = False
+                for letterCode in line.block.words:
+                    if letterCode.letter == 'E':
+                        extrude_move = True
+                for block in line.block.gcodes:
+                    if type(block) == pygcode.gcodes.GCodeLinearMove and extrude_move:
+                        if block.Z is not None:
+                            z = block.Z
+                            print 'OLLO: Proceso en Z'
+                        if block.X is not None and block.Y is not None:
+                            x = block.X
+                            y = block.Y
+                            parray = np.array([x, y, z])
+                            puntos.append(parray)
+                    elif type(block) == pygcode.gcodes.GCodeRapidMove or type(block) == pygcode.gcodes.GCodeLinearMove:
+                        if block.X is not None:
+                            x = block.X
+                        if block.Y is not None:
+                            y = block.Y
+                        if block.Z is not None:
+                            z = block.Z
+                        if puntos:
+                            if puntos > 1:
+                                # REVIEW:  se hai varios puntos sen proceso, vaise o ultimo
+                                lineas.append(puntos)
+                            puntos = []
+                        parray = np.array([x, y, z])
+                        puntos.append(parray)
+        if puntos:
+            lineas.append(puntos)
+        tool_path = self.planning.get_path_from_fill_lines(lineas)
+        focus = 0
+        tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
+        self.path.extend(tool_path)
+
     def save_xml_to_file(self, filename, top):
         rough_string = ET.tostring(top, 'utf-8')
         reparsed = minidom.parseString(rough_string)

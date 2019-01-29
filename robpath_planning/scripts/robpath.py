@@ -292,7 +292,7 @@ class RobPathUI(QtGui.QMainWindow):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
                 self.plot, 'Open file', self.dirname,
-                'Mesh Files (*.stl);; Process file (*xml);; Deviation map (*cmr)')
+                'Mesh Files (*.stl);; Process file (*xml);; Deviation map (*cmr);; Gcode (*gcode)')
             if filename:
                 if filename.split('.')[-1] == 'stl':
                     self.enableParts(True)
@@ -316,6 +316,20 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.part.devmap.save_stl('surface_robpath_delaunay.stl', self.robpath.part.rays.triangles)
                 elif filename.split('.')[-1] == 'xml':
                     self.robpath.load_xml(filename)
+                    self.new_xml = True
+                    self.timer.start(100)
+                    self.btnSaveRapid.setEnabled(True)
+                    length = self.robpath.planning.path_length(self.robpath.path)
+                    laser_time = length[0] / self.sbSpeed.value()
+                    travel_time = length[1] / self.sbTravel.value()
+                    time = laser_time + travel_time
+                    time_str = (str(round(time / 60, 2)) + ' min:\n'
+                                + str(round(laser_time / 60, 2)) + ' process + '
+                                + str(round(travel_time / 60, 2)) + ' travel')
+                    print time_str
+                    self.labelTime.setText(time_str)
+                elif filename.split('.')[-1] == 'gcode':
+                    self.robpath.load_gcode(filename)
                     self.new_xml = True
                     self.timer.start(100)
                     self.btnSaveRapid.setEnabled(True)
