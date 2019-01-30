@@ -453,6 +453,8 @@ class RobPathUI(QtGui.QMainWindow):
         save_time = datetime.datetime.now().isoformat() + '_'
         filename = save_time + 'robpath.mod'
         directory = '../../AIMEN'
+        self.rapid.dynamic_params = self.robpath.dynamic_params
+        self.rapid.params_group = self.robpath.params_group
         #if os.path.exists(self.dirname + '/base_frame.json'):
         #    self.robpath.load_base_frame(self.dirname + '/base_frame.json')
         self.robpath.path = self.robpath.transform_path(self.robpath.path)

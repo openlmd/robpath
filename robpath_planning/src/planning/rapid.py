@@ -26,6 +26,9 @@ class Rapid():
 
         self.laser_type = 'trudisk'
         self.feeder_type = 'gtv'
+        
+        self.dynamic_params = []
+        self.params_group = []
 
     def set_process(self, speed, power, travel=50):
         self.speed = speed
@@ -210,6 +213,8 @@ class Rapid():
     def path2rapid_beta(self, path, module_name='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
+        speed_name = 'vRobpath'
+        speed_t_name = 'vRobpathT'
         # TODO: Get powder and laser parameters
 
         if self.laser_type == 'rofin_rf':
@@ -244,6 +249,9 @@ class Rapid():
         self.offset_y = 0
         for k in range(len(path)):
             p, q, process = path[k]
+            if len(path) == len(self.params_group):
+                if self.params_group[k] != -1:
+                    speed_name = '[%s,500,5000,1000]' % (self.dynamic_params[self.params_group[k]]['speed'])
             if return_track:
                 if p_ant is not None:
                     if p_ant[2] < p[2]:
@@ -259,11 +267,11 @@ class Rapid():
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
                         moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
                     laser_set = True
-                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
             elif laser_track and not process:
                 if laser_set:
                     laser_set = False
-                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
                     if self.feeder_type == 'tps5000':
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
                     else:
@@ -273,11 +281,11 @@ class Rapid():
                         moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
                         moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
-                        moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpath, fine, %s\WObj:=%s;' % (k, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s\WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
                         #moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s \T3:=wireON%s \T4:=wireOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, module_name, module_name, tool_name, wobj_name)])
                     else:
-                        moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, speed_name, module_name, module_name, tool_name, wobj_name)])
                     if self.offset > 0:
                         delta_x = p[0] - p_ant[0]
                         delta_y = p[1] - p_ant[1]
