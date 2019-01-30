@@ -458,7 +458,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
-        self.robpath.save_xml(save_time + 'robpath.xml', self.robpath.path)
+        filename = save_time + 'robpath.xml'
+        self.robpath.save_xml(filename, self.robpath.path)
         #self.rapid.upload_file(filename, directory)
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
