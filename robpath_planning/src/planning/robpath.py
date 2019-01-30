@@ -64,6 +64,8 @@ class RobPath():
         self.planning = Planning()
         self.base_frame = np.eye(4)
         self.origin = np.array([.0, .0, .0])
+        self.dynamic_params = []
+        self.params_group = []
 
     def load_mesh(self, filename):
         self.part = Part(filename)
@@ -75,8 +77,11 @@ class RobPath():
         tree = ET.parse(filename)
         root = tree.getroot()
         self.path = []
+        self.dynamic_params = []
+        self.params_group = []
         lineas = []
         tool_path = []
+        parameters_index = -1
         if root.tag == 'Programa':
             for line in root.iter('Desplazamiento'):
                 if line.attrib['tipo'] == 'linea3D':
@@ -104,7 +109,14 @@ class RobPath():
                 if part.tag == 'part':
                     for layer in part:
                         if layer.tag == 'layer':
+                            if layer.find('parameters') is not None:
+                                parameters_index = len(self.dynamic_params)
+                            else:
+                                parameters_index = -1
                             for laserTrack in layer:
+                                if laserTrack.tag == 'parameters':
+                                    self.dynamic_params.append({'speed':laserTrack.attrib['speed'],
+                                                                'laserPower':laserTrack.attrib['laserPower']})
                                 if laserTrack.tag == 'laserTrack':
                                     puntos = []
                                     for point in laserTrack:
@@ -113,6 +125,7 @@ class RobPath():
                                                     float(point.attrib['y']),
                                                     float(point.attrib['z'])])
                                             puntos.append(parray)
+                                            self.params_group.append(parameters_index)
                                     lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
