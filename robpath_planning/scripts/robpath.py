@@ -2,6 +2,7 @@
 import os
 import numpy as np
 import json
+import datetime
 os.environ['QT_API'] = 'pyqt'
 os.environ['ETS_TOOLKIT'] = 'qt4'
 
@@ -449,14 +450,15 @@ class RobPathUI(QtGui.QMainWindow):
         self.btnSaveRapid.setEnabled(True)
 
     def btnSaveRapidClicked(self):
-        filename = 'robpath.mod'
+        save_time = datetime.datetime.now().isoformat() + '_'
+        filename = save_time + 'robpath.mod'
         directory = '../../AIMEN'
-        if os.path.exists(self.dirname + '/base_frame.json'):
-            self.robpath.load_base_frame(self.dirname + '/base_frame.json')
+        #if os.path.exists(self.dirname + '/base_frame.json'):
+        #    self.robpath.load_base_frame(self.dirname + '/base_frame.json')
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
-        self.robpath.save_xml('robpath.xml', self.robpath.path)
+        self.robpath.save_xml(save_time + 'robpath.xml', self.robpath.path)
         #self.rapid.upload_file(filename, directory)
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")
