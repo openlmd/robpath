@@ -7,7 +7,7 @@ import calculate as calc
 class Planning:
     def __init__(self):
         # self.orientation = np.array((0.0, 0.0, 0.0, 1.0))
-        self.orientation = np.array((-0.113, 0.0, 0.0, 0.994))  # Cabezal de fio (-0.168924, 0.0, 0.0, 0.985627)
+        self.orientation = np.array((0, 0.0, 0.0, 1))  # Cabezal de fio (-0.168924, 0.0, 0.0, 0.985627)
         self.printtest = True
         self.start_point = 'max'
 

@@ -24,6 +24,7 @@ PROC main%(module_name)s()
 
     %(feeder_conf)s
 
+    ActUnit STN1;
     ConfL \Off;
 
     MoveJ Offs(Trobpath0, 0, 0, 15.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;

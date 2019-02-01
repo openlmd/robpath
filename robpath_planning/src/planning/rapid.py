@@ -15,9 +15,9 @@ class Rapid():
         self.speed_t = 50
         self.travel_zone = 'z0'
 
-        self.tool = [[351.106, -36.6277, 86.9243], [0.73432, 0, -0.6788, 0]] # Tool pose
+        self.tool = [[351.106, -36.6277, 86.9243], [0.707, 0, -0.707, 0]] # Tool pose
         #self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
-        self.workobject = [[1655, -87, 932], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose
+        self.workobject = [[-300, 0, 300], [0.707,0,0,-0.707]] # Work Object pose
         #self.workobject = [[1255, -87, 1032], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose 60
 
         self.offset = 5
@@ -238,7 +238,7 @@ class Rapid():
         targets = ''
         for k in range(len(path)):
             p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
+            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,0,0,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
         # Movement definition
         moves = ''
         laser_track = False
@@ -312,7 +312,7 @@ class Rapid():
         moves = '\n'.join([moves, '\n'])
 
         tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
-        wobj = '[FALSE,TRUE,"",[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[[0,0,0],[1,0,0,0]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
+        wobj = '[FALSE,FALSE,"STN1",[[0,0,0],[1,0,0,0]],[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
 
         return RAPID_TEMPLATE %{'module_name': module_name,
                                 'laser_out': laser_out,
