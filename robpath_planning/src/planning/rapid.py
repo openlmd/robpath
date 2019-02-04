@@ -15,9 +15,9 @@ class Rapid():
         self.speed_t = 50
         self.travel_zone = 'z0'
 
-        self.tool = [[351.106, -36.6277, 86.9243], [0.707, 0, -0.707, 0]] # Tool pose
+        self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0, -0.70711, 0]] # Tool pose
         #self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
-        self.workobject = [[-300, 0, 300], [0.707,0,0,-0.707]] # Work Object pose
+        self.workobject = [[-300, 0, 300], [0.70711,0,0,-0.70711]] # Work Object pose
         #self.workobject = [[1255, -87, 1032], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose 60
 
         self.offset = 5
