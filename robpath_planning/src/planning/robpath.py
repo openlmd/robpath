@@ -144,7 +144,8 @@ class RobPath():
     def load_gcode(self, filename):
         import pygcode
         from pygcode import Line
-        z = 0.0
+        z_offset = -0.0
+        z = 0.0 + z_offset
         x = 0.0
         y = 0.0
         self.path = []
@@ -161,27 +162,29 @@ class RobPath():
                 for block in line.block.gcodes:
                     if type(block) == pygcode.gcodes.GCodeLinearMove and extrude_move:
                         if block.Z is not None:
-                            z = block.Z
+                            z = block.Z + z_offset
                             print 'OLLO: Proceso en Z'
                         if block.X is not None and block.Y is not None:
                             x = block.X
                             y = block.Y
                             parray = np.array([x, y, z])
-                            puntos.append(parray)
+                            if z >= 0.0:
+                                puntos.append(parray)
                     elif type(block) == pygcode.gcodes.GCodeRapidMove or type(block) == pygcode.gcodes.GCodeLinearMove:
                         if block.X is not None:
                             x = block.X
                         if block.Y is not None:
                             y = block.Y
                         if block.Z is not None:
-                            z = block.Z
+                            z = block.Z + z_offset
                         if puntos:
                             if puntos > 1:
                                 # REVIEW:  se hai varios puntos sen proceso, vaise o ultimo
                                 lineas.append(puntos)
                             puntos = []
                         parray = np.array([x, y, z])
-                        puntos.append(parray)
+                        if z >= 0.0:
+                            puntos.append(parray)
         if puntos:
             lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
