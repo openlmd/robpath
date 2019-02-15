@@ -15,9 +15,9 @@ class Rapid():
         self.speed_t = 50
         self.travel_zone = 'z0'
 
-        self.tool = [[351.106, -36.6277, 86.9243], [0.70711, 0, -0.70711, 0]] # Tool pose
+        self.tool = [[227.49,-23.1497,79.8447], [0.70711, 0, -0.70711, 0]] # Tool pose
         #self.tool = [[351.1,-36.6,86.9],[-0.5000, -0.0000, 0.8660, -0.0000]] # Tool pose 60
-        self.workobject = [[-300, 0, 300], [0.70711,0,0,-0.70711]] # Work Object pose
+        self.workobject = [[-145.911,-202.236,13.7597], [0.999938,-0.0000854863,0.000281991,0.0110406]] # Work Object pose
         #self.workobject = [[1255, -87, 1032], [0.999939,0.00523022,0.000667568,-0.00966806]] # Work Object pose 60
 
         self.offset = 5
@@ -238,7 +238,7 @@ class Rapid():
         targets = ''
         for k in range(len(path)):
             p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,0,0,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
+            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,ext_axis1,ext_axis2,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
         # Movement definition
         moves = ''
         laser_track = False
@@ -258,7 +258,10 @@ class Rapid():
                         moves = '\n'.join([moves, '!SLICE at %f mm' % (p[2])])
                 if self.feeder_type == 'tps5000':
                     moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
-                moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
+                if self.feeder_type == 'tps5000':
+                    moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
+                else:
+                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                 return_track = False
             if laser_track and process:
                 if not laser_set:
@@ -297,7 +300,8 @@ class Rapid():
                             moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                             moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
                         else:
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                            moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                            # moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                             #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                     else:
                         if self.feeder_type == 'tps5000':
