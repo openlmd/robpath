@@ -4,8 +4,8 @@
     "height": 0.65,
     "laser_type": "trudisk",
     "offsets": {
-      "line": 3,
-      "z_dir": 3
+      "line": 0,
+      "z_dir": 0
     },
     "overlap": 55.0,
     "process_speed": 8.0,
