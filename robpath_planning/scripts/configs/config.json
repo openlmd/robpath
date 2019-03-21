@@ -1,11 +1,11 @@
 {
   "configuration": {
-    "feeder_type": "gtv",
-    "height": 0.65,
-    "laser_type": "trudisk",
+    "feeder_type": "tps5000waam",
+    "height": 1.65,
+    "laser_type": "waam",
     "offsets": {
       "line": 0,
-      "z_dir": 0
+      "z_dir": 5
     },
     "overlap": 55.0,
     "process_speed": 8.0,
@@ -20,11 +20,13 @@
     "feeder_type": [
       "gtv",
       "medicoat",
-      "tps5000"
+      "tps5000",
+      "tps5000waam"
     ],
     "laser_type": [
       "trudisk",
-      "rofin_rf"
+      "rofin_rf",
+      "waam"
     ],
     "robot": [
       "abb",
