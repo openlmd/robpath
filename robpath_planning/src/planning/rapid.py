@@ -189,7 +189,7 @@ class Rapid():
             FEEDER_TEMPLATE += '    WaitTime 15;'
         elif self.feeder_type == 'tps5000waam':
             FEEDER_TEMPLATE += '\nSet doTPSReady;\nSet doFr1RobotReady;\nSet doFr1ErrorReset;\nSet doTPSReset;\nSetGo goFr1Mode,1;\nReset doTPSOP0;\nSet doTPSOP1;\nReset doTPSOP2;\nSet doFr1WeldingSim;\n'
-            FEEDER_TEMPLATE += 'TriggEquip wireON'+module_name+', 0 \Start, 0 \DOp:=doFr1ArcOn, 1;\n'
+            FEEDER_TEMPLATE += 'TriggEquip wireON'+module_name+', 2 \Start, 0 \DOp:=doFr1ArcOn, 1;\n'
             FEEDER_TEMPLATE += 'TriggEquip wireOFF'+module_name+', 2, 0 \DOp:=doFr1ArcOn, 0;\n'
         return FEEDER_TEMPLATE %{'carrier': self.carrier,
                                 'stirrer': self.stirrer,
@@ -278,13 +278,16 @@ class Rapid():
                     moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                 return_track = False
             if laser_track and process:
-                if not laser_set:
-                    moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
-                    if self.feeder_type == 'tps5000':
-                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
-                        moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
-                    laser_set = True
-                moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
+                if self.feeder_type == 'tps5000waam':
+                    moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s fine, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
+                else:
+                    if not laser_set:
+                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                        if self.feeder_type == 'tps5000':
+                            moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
+                            moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
+                        laser_set = True
+                    moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
             elif laser_track and not process:
                 if laser_set:
                     laser_set = False
