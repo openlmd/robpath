@@ -165,52 +165,85 @@ class RobPathUI(QtGui.QMainWindow):
         self.checkBoxSliceOnedir.blockSignals(value)
 
     def loadSettings(self):
-        print 'load'
-        fileNam = os.path.realpath(__file__)
-        fileDir = os.path.dirname(fileNam)
-        fileDir = fileDir + "/configs/config.json"
+        filename = QtGui.QFileDialog.getOpenFileName(
+            None, 'Open file', None,
+            'Configuration (*json)')
+        if filename.split('.')[-1] == 'json':
+            with open(filename) as data_file:
+                self.settings = json.load(data_file)
 
-        with open(fileDir) as data_file:
-            self.settings = json.load(data_file)
-
-        self.sbOverlap.setValue(self.settings["configuration"]["overlap"])
-        self.sbWidth.setValue(self.settings["configuration"]["width"])
-        self.sbHeight.setValue(self.settings["configuration"]["height"])
-        self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
-        self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
-        self.stop_layer = self.settings["configuration"]["stop_layer"]
-        self.disparity_work = self.settings["configuration"]["disparity"]
-        if not self.settings["configuration"]["laser_type"] in self.settings["limits"]["laser_type"]:
-            QtGui.QMessageBox.warning(self, "Cannot configure laser",
-                    "The selected laser type is not implemented.",
-                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
-                    QtGui.QMessageBox.NoButton)
-        else:
-            self.rapid.laser_type = self.settings["configuration"]["laser_type"]
-        if not self.settings["configuration"]["feeder_type"] in self.settings["limits"]["feeder_type"]:
-            QtGui.QMessageBox.warning(self, "Cannot configure feeder",
-                    "The selected feeder type is not implemented.",
-                    QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
-                    QtGui.QMessageBox.NoButton)
-        else:
-            self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
-        self.rapid.offset = self.settings["configuration"]["offsets"]["line"]
-        self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
-        self.robpath.planning.start_point = self.settings["configuration"]["start_point"]
+        if "overlap" in self.settings["configuration"]:
+             self.sbOverlap.setValue(self.settings["configuration"]["overlap"])
+        if "width" in self.settings["configuration"]:
+            self.sbWidth.setValue(self.settings["configuration"]["width"])
+        if "height" in self.settings["configuration"]:
+            self.sbHeight.setValue(self.settings["configuration"]["height"])
+        if "process_speed" in self.settings["configuration"]:
+            self.sbSpeed.setValue(self.settings["configuration"]["process_speed"])
+        if "travel_speed" in self.settings["configuration"]:
+            self.sbTravel.setValue(self.settings["configuration"]["travel_speed"])
+        if "stop_layer" in self.settings["configuration"]:
+            self.stop_layer = self.settings["configuration"]["stop_layer"]
+        if "disparity" in self.settings["configuration"]:
+            self.disparity_work = self.settings["configuration"]["disparity"]
+        if "laser_type" in self.settings["configuration"]:
+            if not self.settings["configuration"]["laser_type"] in self.settings["limits"]["laser_type"]:
+                QtGui.QMessageBox.warning(self, "Cannot configure laser",
+                        "The selected laser type is not implemented.",
+                        QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                        QtGui.QMessageBox.NoButton)
+            else:
+                self.rapid.laser_type = self.settings["configuration"]["laser_type"]
+        if "feeder_type" in self.settings["configuration"]:
+            if not self.settings["configuration"]["feeder_type"] in self.settings["limits"]["feeder_type"]:
+                QtGui.QMessageBox.warning(self, "Cannot configure feeder",
+                        "The selected feeder type is not implemented.",
+                        QtGui.QMessageBox.Ok, QtGui.QMessageBox.NoButton,
+                        QtGui.QMessageBox.NoButton)
+            else:
+                self.rapid.feeder_type = self.settings["configuration"]["feeder_type"]
+        if "offsets" in self.settings["configuration"]:
+            if "line" in self.settings["configuration"]["offsets"]:
+                self.rapid.offset = self.settings["configuration"]["offsets"]["line"]
+            if "z_dir" in self.settings["configuration"]["offsets"]:
+                self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
+        if "start_point" in self.settings["configuration"]:
+            self.robpath.planning.start_point = self.settings["configuration"]["start_point"]
+        if "fill_direction" in self.settings["configuration"]:
+            self.sbFilling.setValue(self.settings["configuration"]["fill_direction"])
+        if "one_way" in self.settings["configuration"]:
+            self.checkBoxSliceOnedir.setChecked(self.settings["configuration"]["one_way"])
+        if "reverse_y_start" in self.settings["configuration"]:
+            self.checkBoxSliceInvertY.setChecked(self.settings["configuration"]["reverse_y_start"])
+        if "reverse_x_start" in self.settings["configuration"]:
+            self.checkBoxSliceInvertX.setChecked(self.settings["configuration"]["reverse_x_start"])
 
     def saveSettings(self):
-        print 'save'
         self.settings["configuration"]["overlap"] = self.sbOverlap.value()
         self.settings["configuration"]["width"] = self.sbWidth.value()
         self.settings["configuration"]["height"] = self.sbHeight.value()
         self.settings["configuration"]["process_speed"] = self.sbSpeed.value()
         self.settings["configuration"]["travel_speed"] = self.sbTravel.value()
+        self.settings["configuration"]["stop_layer"] = self.stop_layer
+        self.settings["configuration"]["laser_type"] = self.rapid.laser_type
+        self.settings["configuration"]["offsets"]["line"] = self.rapid.offset
+        self.settings["configuration"]["offsets"]["z_dir"] = self.rapid.offset_z
+        self.settings["configuration"]["start_point"] = self.robpath.planning.start_point
+        self.settings["configuration"]["fill_direction"] = self.sbFilling.value()
+        self.settings["configuration"]["one_way"] = self.checkBoxSliceOnedir.isChecked()
+        self.settings["configuration"]["reverse_y_start"] = self.checkBoxSliceInvertY.isChecked()
+        self.settings["configuration"]["reverse_x_start"] = self.checkBoxSliceInvertX.isChecked()
 
-        fileNam = os.path.realpath(__file__)
-        fileDir = os.path.dirname(fileNam)
-        fileDir = fileDir + "/configs/config.json"
+        filename = QtGui.QFileDialog.getSaveFileName(
+            None, 'Save file', None,
+            'All Files (*);;ABB Files (*.mod)')
+        if len(filename)==0:
+            print 'Type a file name'
+            return
+        if filename.split('.')[-1] != 'json':
+            filename = filename + '.json'
 
-        with open(fileDir, 'w') as data_file:
+        with open(filename, 'w') as data_file:
             data_file.write(json.dumps(self.settings, sort_keys=True,
                                        indent=2, separators=(',', ': ')))
 
@@ -251,10 +284,11 @@ class RobPathUI(QtGui.QMainWindow):
         self.rapid.set_powder(carrier, stirrer, turntable)
 
     def changeFilling(self):
-        self.robpath.part.filling = self.sbFilling.value()
-        self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
-        self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
-        self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
+        if self.robpath.part:
+            self.robpath.part.filling = self.sbFilling.value()
+            self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
+            self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
+            self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
 
     def updatePosition(self, position):
         x, y, z = position
@@ -302,13 +336,15 @@ class RobPathUI(QtGui.QMainWindow):
                     self.setWindowTitle('Mesh Viewer: %s' % filename)
                     self.btnSelectMesh.addItems([self.robpath.name])
                     self.btnSelectMesh.setCurrentIndex(self.btnSelectMesh.count())
-                    self.updateMeshData(self.robpath.name)
                     self.btnProcessMesh.setEnabled(True)
                     self.robpath.part.filling = self.sbFilling.value()
-                    # TODO: Change to direction and start point
                     self.robpath.part.one_dir_fill = self.checkBoxSliceOnedir.isChecked()
                     self.robpath.part.invert_fill_y = self.checkBoxSliceInvertY.isChecked()
                     self.robpath.part.invert_fill_x = self.checkBoxSliceInvertX.isChecked()
+                    self.changeProcess()
+                    self.changeTrack()
+                    self.changePowder()
+                    self.updateMeshData(self.robpath.name)
                 elif filename.split('.')[-1] == 'cmr':
                     # TODO: Check if part exists
                     self.robpath.part.load_deviation(filename)

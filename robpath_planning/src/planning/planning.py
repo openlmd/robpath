@@ -139,7 +139,7 @@ class Planning:
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair
-                    path.extend(self.get_path_from_fill_lines(fill_lines))
+                    path.extend(self.get_path_from_fill_lines_old(fill_lines))
             t1 = time.time()
             print '[%.2f%%] Time to path %.3f s.' % (
                 (100.0 * (k + 1)) / len(slices), t1 - t0)
