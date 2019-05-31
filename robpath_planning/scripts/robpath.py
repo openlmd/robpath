@@ -209,6 +209,8 @@ class RobPathUI(QtGui.QMainWindow):
                 self.rapid.offset_z = self.settings["configuration"]["offsets"]["z_dir"]
         if "start_point" in self.settings["configuration"]:
             self.robpath.planning.start_point = self.settings["configuration"]["start_point"]
+        if "start_point_dir" in self.settings["configuration"]:
+            self.robpath.planning.start_point_dir = self.settings["configuration"]["start_point_dir"]
         if "fill_direction" in self.settings["configuration"]:
             self.sbFilling.setValue(self.settings["configuration"]["fill_direction"])
         if "one_way" in self.settings["configuration"]:
@@ -229,6 +231,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.settings["configuration"]["offsets"]["line"] = self.rapid.offset
         self.settings["configuration"]["offsets"]["z_dir"] = self.rapid.offset_z
         self.settings["configuration"]["start_point"] = self.robpath.planning.start_point
+        self.settings["configuration"]["start_point_dir"] = self.robpath.planning.start_point_dir
         self.settings["configuration"]["fill_direction"] = self.sbFilling.value()
         self.settings["configuration"]["one_way"] = self.checkBoxSliceOnedir.isChecked()
         self.settings["configuration"]["reverse_y_start"] = self.checkBoxSliceInvertY.isChecked()
@@ -236,7 +239,7 @@ class RobPathUI(QtGui.QMainWindow):
 
         filename = QtGui.QFileDialog.getSaveFileName(
             None, 'Save file', None,
-            'All Files (*);;ABB Files (*.mod)')
+            'All Files (*);;Settings Files (*.json)')
         if len(filename)==0:
             print 'Type a file name'
             return
@@ -486,9 +489,15 @@ class RobPathUI(QtGui.QMainWindow):
         self.btnSaveRapid.setEnabled(True)
 
     def btnSaveRapidClicked(self):
-        save_time = datetime.datetime.now().isoformat() + '_'
-        filename = save_time + 'robpath.mod'
-        directory = '../../AIMEN'
+        filename = QtGui.QFileDialog.getSaveFileName(
+            None, 'Save file', None,
+            'All Files (*);;ABB Files (*.mod)')
+        if len(filename)==0:
+            print 'Type a file name'
+            return
+        if filename.split('.')[-1] != 'mod':
+            filename = filename + '.mod'
+
         self.rapid.dynamic_params = self.robpath.dynamic_params
         self.rapid.params_group = self.robpath.params_group
         #if os.path.exists(self.dirname + '/base_frame.json'):
@@ -496,7 +505,7 @@ class RobPathUI(QtGui.QMainWindow):
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
-        filename = save_time + 'robpath.xml'
+        filename = filename.split('.')[0] + '.xml'
         self.robpath.save_xml(filename, self.robpath.path)
         #self.rapid.upload_file(filename, directory)
         QtGui.QMessageBox.information(

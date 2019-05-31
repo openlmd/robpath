@@ -165,7 +165,13 @@ class Mesh:
         point1, point2, point3 = triangle
         (x1, y1, z1), (x2, y2, z2), (x3, y3, z3) = point1, point2, point3
         intersect = None
-        if z1 < z_level:
+        if z1 == z_level == z2:
+            intersect = np.array([[x1, y1, z_level],
+                                      [x2, y2, z_level]])
+        elif z3 == z_level == z2:
+            intersect = np.array([[x2, y2, z_level],
+                                      [x3, y3, z_level]])
+        elif z1 < z_level:
             dx21, dy21, dz21 = point2 - point1
             dx31, dy31, dz31 = point3 - point1
             dx32, dy32, dz32 = point3 - point2
@@ -203,17 +209,14 @@ class Mesh:
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
         for triangle in self.ctriangles:
-            if (triangle[2, 2] < z_level) or (triangle[0, 2] > z_level):
-                pass
-            elif (triangle[0, 2] < z_level) and (triangle[2, 2] > z_level):
+            if (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
+                print "WARNING: Triangle in z_level!"
+            elif triangle[0, 2] < z_level < triangle[2, 2]:
                 intersection = self.get_z_intersect(triangle, z_level)
                 unsorted_lines.append(intersection)
-            elif (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
-                print "WARNING: Triangle in z_level!"
-            elif (triangle[0, 2] <= z_level) and (triangle[1, 2] > z_level):
-                print 'TRIANGULO CON LADO EN Z'
-            elif (triangle[1, 2] < z_level) and (triangle[2, 2] >= z_level):
-                print 'TRIANGULO CON LADO EN Z'
+            elif triangle[1, 2] == z_level:
+                intersection = self.get_z_intersect(triangle, z_level)
+                unsorted_lines.append(intersection)
         doubles = 0
         for n_line in range(len(unsorted_lines)):
             unsorted_lines[n_line] = np.round(unsorted_lines[n_line],5)

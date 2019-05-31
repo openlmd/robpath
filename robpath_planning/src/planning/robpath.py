@@ -217,7 +217,7 @@ class RobPath():
             punt = ET.SubElement(despl, 'Punto')
             children = ET.XML('<root><Orden>%i</Orden><x>%f</x><y>%f</y><z>%f</z></root>' %(orde,p[0],p[1],p[2]))
             punt.extend(children)
-        self.save_xml_to_file('robpath_old.xml', top)
+        self.save_xml_to_file(filename.split('.')[0] + '_old.xml', top)
         self.save_xml_new(filename, path)
 
     def save_xml_new(self, filename, path):
