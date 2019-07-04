@@ -252,7 +252,7 @@ class Rapid():
         targets = ''
         for k in range(len(path)):
             p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[9E+09,ext_axis1,ext_axis2,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
+            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[ext_axis0,ext_axis1,ext_axis2,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
         # Movement definition
         moves = ''
         laser_track = False
@@ -267,20 +267,29 @@ class Rapid():
                 if self.params_group[k] != -1:
                     speed_name = '[%s,500,5000,1000]' % (self.dynamic_params[self.params_group[k]]['speed'])
             if return_track:
+                #TODO: revisar se se poderia facer esto cando se move ao punto inicial
                 if p_ant is not None:
                     if p_ant[2] < p[2]:
+                        # Slice identifier based on Z increment
                         moves = '\n'.join([moves, '!SLICE at %f mm' % (p[2])])
-                if self.feeder_type == 'tps5000':
-                    moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
+                # if self.feeder_type == 'tps5000':
+                #     moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
                 if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
+                    # In wire process, approach to point with offsets
+                    #TODO: cambiar a condicion do IF para que sexa sempre que hai offsets
                     moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
                 else:
-                    moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                    pass
+                    #TODO: Este else sobra
+                    #moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                 return_track = False
             if laser_track and process:
+                # Point inside a track, multiline track
                 if self.feeder_type == 'tps5000waam':
-                    moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s fine, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
+                    # Triggers only for process ON
+                    moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s, z0, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
                 else:
+                    # Set process signal and moveL
                     if not laser_set:
                         moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
                         if self.feeder_type == 'tps5000':
@@ -289,17 +298,22 @@ class Rapid():
                         laser_set = True
                     moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
             elif laser_track and not process:
+                # Last point of a track
                 if laser_set:
+                    # Last point of a multiline track
                     laser_set = False
                     if self.feeder_type == 'tps5000waam':
-                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserOFF%s fine, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
+                        # Trigger ending with process OFF
+                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserOFF%s, fine, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
                     else:
+                        # Move to point and OFF process
                         moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
                         if self.feeder_type == 'tps5000':
                             moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
                         else:
                             moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                 else:
+                    # Last point of a single line track
                     if self.feeder_type == 'tps5000':
                         moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
@@ -308,8 +322,9 @@ class Rapid():
                         moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
                         #moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s \T3:=wireON%s \T4:=wireOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, module_name, module_name, tool_name, wobj_name)])
                     else:
-                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s \T2:=laserOFF%s, z0, %s\WObj:=%s;' % (k, speed_name, module_name, module_name, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s \T2:=laserOFF%s, fine, %s\WObj:=%s;' % (k, speed_name, module_name, module_name, tool_name, wobj_name)])
                     if self.offset > 0 or self.offset_z > 0:
+                        # Add offset point if necessary
                         delta_x = p[0] - p_ant[0]
                         delta_y = p[1] - p_ant[1]
                         delta_t = delta_x + delta_y
@@ -320,20 +335,24 @@ class Rapid():
                             moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                             moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
                         elif self.feeder_type == 'tps5000waam':
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, fine, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                         else:
-                            moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                            # moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                            # moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                             #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
                     else:
+                        #TODO: Creo que non fai falta, revisar
                         if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
                             moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                     return_track = True
             elif not laser_track and process:
+                # Initial point of a track
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
             else:
+                # Multiline travel movement
                 moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-            laser_track = process
+            # Update last point
+            laser_track = process # Same as process_ant
             p_ant, q_ant, process_ant = path[k]
         moves = '\n'.join([moves, '\n'])
 

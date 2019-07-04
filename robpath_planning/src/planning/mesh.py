@@ -208,7 +208,8 @@ class Mesh:
     def get_slice(self, z_level):
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
-        for triangle in self.ctriangles:
+        local_ctriangles = self.ctriangles
+        for triangle in local_ctriangles:
             if (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
                 print "WARNING: Triangle in z_level!"
             elif triangle[0, 2] < z_level < triangle[2, 2]:
@@ -252,14 +253,14 @@ class Mesh:
             return None
 
     def get_mesh_slices(self, layer_height):
-        t0 = time.time()
+        #t0 = time.time()
         slices = []
         self.resort_triangles()
         levels = self.get_zlevels(layer_height)
-        for k, z_level in enumerate(levels):
+        for z_level in levels:
             slices.append(self.get_slice(z_level))
-            t1 = time.time()
-            print '[%.2f%%] Time to slice at %.1fmm %.3f s.' % ((100.0 * (k + 1)) / len(levels), z_level, t1 - t0)
+            #t1 = time.time()
+            #print '[%.2f%%] Time to slice at %.1fmm %.3f s.' % ((100.0 * (k + 1)) / len(levels), z_level, t1 - t0)
         return slices
 
 

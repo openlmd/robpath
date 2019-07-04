@@ -9,7 +9,7 @@ class Planning:
         # self.orientation = np.array((0.0, 0.0, 0.0, 1.0))
         self.orientation = np.array((0, 0.0, 0.0, 1))  # Cabezal de fio (-0.168924, 0.0, 0.0, 0.985627)
         self.printtest = True
-        self.start_point = 'max'
+        self.start_point = 'mid'
         self.start_point_dir = 'max'
 
     def get_range_values(self, v_min, v_max, v_dist):
@@ -105,30 +105,31 @@ class Planning:
         if one_dir:
             return i_lines
         # Flips the array to start in the last point of the next line.
-        lines = []
+        # lines = []
         pair = False
-        for line in i_lines:
+        for line in range(len(i_lines)):
             if pair:
-                line = np.flipud(line)
+                i_lines[line] = np.flipud(i_lines[line])
             pair = not pair
-            lines.append(line)
-        return lines
+            # lines.append(line)
+        return i_lines
 
     def get_path_from_fill_lines_old(self, fill_lines):
         tool_path = []
+        local_orientation = self.orientation
         for line in fill_lines:
             for k in range(0, len(line), 2):
                 pnt1, pnt2 = line[k], line[k+1]
                 if len(tool_path):
                     last_point = tool_path[-1][0]
                     if np.all(last_point == pnt1):
-                        tool_path[-1] = [pnt2, self.orientation, False]
+                        tool_path[-1] = [pnt2, local_orientation , False]
                     else:
-                        tool_path.append([pnt1, self.orientation, True])
-                        tool_path.append([pnt2, self.orientation, False])
+                        tool_path.append([pnt1, local_orientation, True])
+                        tool_path.append([pnt2, local_orientation, False])
                 else:
-                    tool_path.append([pnt1, self.orientation, True])
-                    tool_path.append([pnt2, self.orientation, False])
+                    tool_path.append([pnt1, local_orientation, True])
+                    tool_path.append([pnt2, local_orientation, False])
         return tool_path
 
     def get_path_from_fill_lines(self, fill_lines):
@@ -141,8 +142,9 @@ class Planning:
         return tool_path
 
     def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False, degrees=None):
-        t0 = time.time()
+        #t0 = time.time()
         path = []
+        local_orientation = self.orientation
         #pair = False
         for k, slice in enumerate(slices):
             if slice is not None:
@@ -153,8 +155,8 @@ class Planning:
 #                    else:
 #                        contour = slice[1]
                         for point in contour[:-1]:
-                            path.append([point, self.orientation, True])
-                        path.append([contour[-1], self.orientation, False])
+                            path.append([point, local_orientation, True])
+                        path.append([contour[-1], local_orientation, False])
                 else:
                     fill_lines = self.get_grated(slice, track_distance, one_dir, invert, degrees)
                     #if self.start_point == 'max':
@@ -163,9 +165,9 @@ class Planning:
                         fill_lines.reverse()
                     pair = not pair
                     path.extend(self.get_path_from_fill_lines_old(fill_lines))
-            t1 = time.time()
-            print '[%.2f%%] Time to path %.3f s.' % (
-                (100.0 * (k + 1)) / len(slices), t1 - t0)
+            #t1 = time.time()
+            #print '[%.2f%%] Time to path %.3f s.' % (
+            #    (100.0 * (k + 1)) / len(slices), t1 - t0)
         return self.translate_path(path, np.array([0, 0, focus]))
 
     def translate_path(self, path, position):

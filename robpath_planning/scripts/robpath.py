@@ -219,6 +219,10 @@ class RobPathUI(QtGui.QMainWindow):
             self.checkBoxSliceInvertY.setChecked(self.settings["configuration"]["reverse_y_start"])
         if "reverse_x_start" in self.settings["configuration"]:
             self.checkBoxSliceInvertX.setChecked(self.settings["configuration"]["reverse_x_start"])
+        if "tool" in self.settings["configuration"]:
+            self.rapid.tool = self.settings["configuration"]["tool"]
+        if "base_frame" in self.settings["configuration"]:
+            self.rapid.workobject = self.settings["configuration"]["base_frame"]
 
     def saveSettings(self):
         self.settings["configuration"]["overlap"] = self.sbOverlap.value()
@@ -236,6 +240,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.settings["configuration"]["one_way"] = self.checkBoxSliceOnedir.isChecked()
         self.settings["configuration"]["reverse_y_start"] = self.checkBoxSliceInvertY.isChecked()
         self.settings["configuration"]["reverse_x_start"] = self.checkBoxSliceInvertX.isChecked()
+        self.settings["configuration"]["tool"] = self.rapid.tool
+        self.settings["configuration"]["base_frame"] = self.rapid.workobject
 
         filename = QtGui.QFileDialog.getSaveFileName(
             None, 'Save file', None,
@@ -422,7 +428,7 @@ class RobPathUI(QtGui.QMainWindow):
                 self.robpath.update_process_alfa(filled=self.chbFilled.isChecked(),
                                             contour=self.chbContour.isChecked())
                 #self.plot.drawSlice(self.robpath.slices, self.robpath.path)
-                self.plot.drawPath(self.robpath.path, self.robpath.part.color)
+                # self.plot.drawPath(self.robpath.path, self.robpath.part.color)
                 self.plot.progress.setValue(100.0 * self.robpath.k / len(self.robpath.levels))
                 self.btnSaveRapid.setEnabled(True)
                 laser_time, travel_time = self.robpath.get_process_time()
@@ -445,7 +451,9 @@ class RobPathUI(QtGui.QMainWindow):
                 self.labelTime.setText(time_str)
                 n_levels = str(len(self.robpath.levels)) + ' layers'
                 self.labelLevels.setText(n_levels)
+                self.plot.drawPath(self.robpath.path, self.robpath.part.color)
             if self.stop_layer == self.robpath.k:
+                self.plot.drawPath(self.robpath.path, self.robpath.part.color)
                 self.timer.stop()
                 self.manual_stop = True
         except IndexError as error:

@@ -178,7 +178,7 @@ class RobPath():
                         if block.Z is not None:
                             z = block.Z + z_offset
                         if puntos:
-                            if puntos > 1:
+                            if len(puntos) > 1:
                                 # REVIEW:  se hai varios puntos sen proceso, vaise o ultimo
                                 lineas.append(puntos)
                             puntos = []
