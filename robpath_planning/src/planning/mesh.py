@@ -165,7 +165,13 @@ class Mesh:
         point1, point2, point3 = triangle
         (x1, y1, z1), (x2, y2, z2), (x3, y3, z3) = point1, point2, point3
         intersect = None
-        if z1 < z_level:
+        if z1 == z_level == z2:
+            intersect = np.array([[x1, y1, z_level],
+                                      [x2, y2, z_level]])
+        elif z3 == z_level == z2:
+            intersect = np.array([[x2, y2, z_level],
+                                      [x3, y3, z_level]])
+        elif z1 < z_level:
             dx21, dy21, dz21 = point2 - point1
             dx31, dy31, dz31 = point3 - point1
             dx32, dy32, dz32 = point3 - point2
@@ -202,18 +208,16 @@ class Mesh:
     def get_slice(self, z_level):
         """Calculates the polygons in the slice for a plane."""
         unsorted_lines = []
-        for triangle in self.ctriangles:
-            if (triangle[2, 2] < z_level) or (triangle[0, 2] > z_level):
-                pass
-            elif (triangle[0, 2] < z_level) and (triangle[2, 2] > z_level):
+        local_ctriangles = self.ctriangles
+        for triangle in local_ctriangles:
+            if (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
+                print "WARNING: Triangle in z_level!"
+            elif triangle[0, 2] < z_level < triangle[2, 2]:
                 intersection = self.get_z_intersect(triangle, z_level)
                 unsorted_lines.append(intersection)
-            elif (triangle[0, 2] == z_level) and (triangle[2, 2] == z_level):
-                print "WARNING: Triangle in z_level!"
-            elif (triangle[0, 2] <= z_level) and (triangle[1, 2] > z_level):
-                print 'TRIANGULO CON LADO EN Z'
-            elif (triangle[1, 2] < z_level) and (triangle[2, 2] >= z_level):
-                print 'TRIANGULO CON LADO EN Z'
+            elif triangle[1, 2] == z_level:
+                intersection = self.get_z_intersect(triangle, z_level)
+                unsorted_lines.append(intersection)
         doubles = 0
         for n_line in range(len(unsorted_lines)):
             unsorted_lines[n_line] = np.round(unsorted_lines[n_line],5)
@@ -249,14 +253,14 @@ class Mesh:
             return None
 
     def get_mesh_slices(self, layer_height):
-        t0 = time.time()
+        #t0 = time.time()
         slices = []
         self.resort_triangles()
         levels = self.get_zlevels(layer_height)
-        for k, z_level in enumerate(levels):
+        for z_level in levels:
             slices.append(self.get_slice(z_level))
-            t1 = time.time()
-            print '[%.2f%%] Time to slice at %.1fmm %.3f s.' % ((100.0 * (k + 1)) / len(levels), z_level, t1 - t0)
+            #t1 = time.time()
+            #print '[%.2f%%] Time to slice at %.1fmm %.3f s.' % ((100.0 * (k + 1)) / len(levels), z_level, t1 - t0)
         return slices
 
 

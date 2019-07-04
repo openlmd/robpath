@@ -2,6 +2,10 @@ MODULE %(module_name)s
 
     PERS tooldata %(tool_name)s:=%(tool)s;
     PERS wobjdata %(wobj_name)s:=%(wobj)s;
+    
+    CONST num ext_axis0 := 0;
+    CONST num ext_axis1 := 0;
+    CONST num ext_axis2 := 0;
 
     VAR triggdata laserON%(module_name)s;
     VAR triggdata laserOFF%(module_name)s;
@@ -24,6 +28,7 @@ PROC main%(module_name)s()
 
     %(feeder_conf)s
 
+    ActUnit STN1;
     ConfL \Off;
 
     MoveJ Offs(Trobpath0, 0, 0, 15.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;

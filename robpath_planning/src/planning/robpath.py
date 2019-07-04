@@ -64,6 +64,8 @@ class RobPath():
         self.planning = Planning()
         self.base_frame = np.eye(4)
         self.origin = np.array([.0, .0, .0])
+        self.dynamic_params = []
+        self.params_group = []
 
     def load_mesh(self, filename):
         self.part = Part(filename)
@@ -75,8 +77,11 @@ class RobPath():
         tree = ET.parse(filename)
         root = tree.getroot()
         self.path = []
+        self.dynamic_params = []
+        self.params_group = []
         lineas = []
         tool_path = []
+        parameters_index = -1
         if root.tag == 'Programa':
             for line in root.iter('Desplazamiento'):
                 if line.attrib['tipo'] == 'linea3D':
@@ -104,7 +109,14 @@ class RobPath():
                 if part.tag == 'part':
                     for layer in part:
                         if layer.tag == 'layer':
+                            if layer.find('parameters') is not None:
+                                parameters_index = len(self.dynamic_params)
+                            else:
+                                parameters_index = -1
                             for laserTrack in layer:
+                                if laserTrack.tag == 'parameters':
+                                    self.dynamic_params.append({'speed':laserTrack.attrib['speed'],
+                                                                'laserPower':laserTrack.attrib['laserPower']})
                                 if laserTrack.tag == 'laserTrack':
                                     puntos = []
                                     for point in laserTrack:
@@ -113,6 +125,7 @@ class RobPath():
                                                     float(point.attrib['y']),
                                                     float(point.attrib['z'])])
                                             puntos.append(parray)
+                                            self.params_group.append(parameters_index)
                                     lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
@@ -131,7 +144,8 @@ class RobPath():
     def load_gcode(self, filename):
         import pygcode
         from pygcode import Line
-        z = 0.0
+        z_offset = -0.0
+        z = 0.0 + z_offset
         x = 0.0
         y = 0.0
         self.path = []
@@ -148,27 +162,29 @@ class RobPath():
                 for block in line.block.gcodes:
                     if type(block) == pygcode.gcodes.GCodeLinearMove and extrude_move:
                         if block.Z is not None:
-                            z = block.Z
+                            z = block.Z + z_offset
                             print 'OLLO: Proceso en Z'
                         if block.X is not None and block.Y is not None:
                             x = block.X
                             y = block.Y
                             parray = np.array([x, y, z])
-                            puntos.append(parray)
+                            if z >= 0.0:
+                                puntos.append(parray)
                     elif type(block) == pygcode.gcodes.GCodeRapidMove or type(block) == pygcode.gcodes.GCodeLinearMove:
                         if block.X is not None:
                             x = block.X
                         if block.Y is not None:
                             y = block.Y
                         if block.Z is not None:
-                            z = block.Z
+                            z = block.Z + z_offset
                         if puntos:
-                            if puntos > 1:
+                            if len(puntos) > 1:
                                 # REVIEW:  se hai varios puntos sen proceso, vaise o ultimo
                                 lineas.append(puntos)
                             puntos = []
                         parray = np.array([x, y, z])
-                        puntos.append(parray)
+                        if z >= 0.0:
+                            puntos.append(parray)
         if puntos:
             lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
@@ -201,7 +217,7 @@ class RobPath():
             punt = ET.SubElement(despl, 'Punto')
             children = ET.XML('<root><Orden>%i</Orden><x>%f</x><y>%f</y><z>%f</z></root>' %(orde,p[0],p[1],p[2]))
             punt.extend(children)
-        self.save_xml_to_file('robpath.xml', top)
+        self.save_xml_to_file(filename.split('.')[0] + '_old.xml', top)
         self.save_xml_new(filename, path)
 
     def save_xml_new(self, filename, path):
@@ -224,7 +240,7 @@ class RobPath():
             point.set('z', str(p[2]))
             if not process:
                 track = ET.SubElement(layer, 'laserTrack')
-        self.save_xml_to_file('robpath_new.xml', top)
+        self.save_xml_to_file(filename, top)
 
     def select_part(self, name):
         for part in self.parts:
