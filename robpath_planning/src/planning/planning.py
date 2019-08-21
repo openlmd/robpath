@@ -188,6 +188,45 @@ class Planning:
         time = laser_dist / laser_speed + travel_dist / travel_speed
         return time
 
+def multi_offset (contours, offset, z_level=None):
+    """ Return a list of offseted contours from a initial list of contours
+    contours: List of contours to be offseted
+    offset: Negative values are inner offsets applied to each contour
+    z_level: Add a z value to return 3D points
+    """
+    #TODO: Funcion recursiva para calcular a lista de offsets
+    import pyclipper
+    # Scale dimensional values according to pyclipper library
+    scaled_points = pyclipper.scale_to_clipper(contours)
+    scaled_offset = pyclipper.scale_to_clipper(offset)
+    pco = pyclipper.PyclipperOffset()
+    pco.AddPaths(scaled_points, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
+    solution_e = []
+    if type(scaled_offset) == int:
+        # One offset for each contour
+        solution_e = pco.Execute(scaled_offset)
+    else:
+        # A list of offsets for each contour
+        for off_val in scaled_offset:
+            polygons = pco.Execute(off_val)
+            for poly in polygons:
+                solution_e.append(poly)
+    contours_offset = []
+    solutions = pyclipper.scale_from_clipper(solution_e)
+    for s in solutions:
+        # Add initial point to the end of each contour to close it
+        solution = np.array(s)
+        solution = np.append(solution, solution[0]) 
+        #TODO: comprobar se pode anhadir o ultimo punto automaticmanet
+        # Reshape contour list to a 2D point matrix
+        solution = solution.reshape(len(solution)/2,2)
+        if z_level:
+            # Add Z value to all points
+            b = np.ones((solution.shape[0], 1)) * z_level
+            solution = np.concatenate((solution,b), axis = 1)
+        contours_offset.append(solution)
+    return contours_offset
+
 
 if __name__ == '__main__':
     import argparse
