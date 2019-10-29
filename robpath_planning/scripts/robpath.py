@@ -336,7 +336,7 @@ class RobPathUI(QtGui.QMainWindow):
         try:
             filename = QtGui.QFileDialog.getOpenFileName(
                 self.plot, 'Open file', self.dirname,
-                'Mesh Files (*.stl);; Process file (*xml);; Deviation map (*cmr);; Gcode (*gcode)')
+                'Mesh Files (*.stl);; Process file (*xml);; Deviation map (*cmr);; Gcode (*gcode);; Orientations (*txt)')
             if filename:
                 if filename.split('.')[-1] == 'stl':
                     self.enableParts(True)
@@ -388,6 +388,10 @@ class RobPathUI(QtGui.QMainWindow):
                                 + str(round(travel_time / 60, 2)) + ' travel')
                     print time_str
                     self.labelTime.setText(time_str)
+                elif filename.split('.')[-1] == 'txt':
+                    self.robpath.load_orientations(filename)
+                    self.new_xml = True
+                    self.timer.start(100)
 
         except AttributeError as error:
             print error

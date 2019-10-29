@@ -197,6 +197,48 @@ class RobPath():
         tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
 
+    def load_orientations(self, filename):
+        '''
+        Load text file containing new orientation for path points
+        [[[[[148.713, 100.0, 1.7, 0, 1.065402062407932],...]]]]]
+        '''
+        import ast
+        layer_ordered_points = []
+        with open(filename, 'r') as fh:
+            for line_text in fh.readlines():
+                layer_ordered_points = ast.literal_eval(line_text)
+        points = []
+        for l in layer_ordered_points:
+            for t in l:
+                for p in t:
+                    ## TODO: REvisar porque hai un nivel mais
+                    for incognita in p:
+                        points.append(incognita)
+        self.update_orientations(points)
+
+    def update_orientations(self, points):
+        '''
+        Update path points with loaded orientations
+        '''
+        yaw = 0
+        new_points = []
+        for point in points:
+            point_ori_rpy = np.radians(np.append(np.array(point[3:5]), yaw))
+            point_xyz, point_ori = calc.rpypose_to_quatpose(np.array(point[:3]), point_ori_rpy)
+            new_points.append([point_xyz, point_ori])
+        if len(new_points) == len(self.path):
+            for i, point in enumerate(new_points):
+                n = 0
+                if not np.array_equal(point[0], self.path[i][0]):
+                    n += 1
+                    self.path[i][0] = point[0]
+                print 'Modified n points: ', n
+                self.path[i][1] = point[1]
+        else:
+            print 'WARNING: Path and orientation poits mismatch'
+            print len(new_points)
+            print len(self.path)
+
     def save_xml_to_file(self, filename, top):
         rough_string = ET.tostring(top, 'utf-8')
         reparsed = minidom.parseString(rough_string)
