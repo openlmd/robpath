@@ -171,7 +171,7 @@ class Planning:
         return self.translate_path(path, np.array([0, 0, focus]))
 
     def translate_path(self, path, position):
-        return [(position + pnt, orient, proc) for (pnt, orient, proc) in path]
+        return [[position + pnt, orient, proc] for (pnt, orient, proc) in path]
 
     def path_length(self, path):
         laser_dist, travel_dist = 0, 0
@@ -202,6 +202,7 @@ def multi_offset (contours, offset, z_level=None):
     pco = pyclipper.PyclipperOffset()
     pco.AddPaths(scaled_points, pyclipper.JT_MITER, pyclipper.ET_CLOSEDPOLYGON)
     solution_e = []
+    n_inner_contours = 1
     if type(scaled_offset) == int:
         # One offset for each contour
         solution_e = pco.Execute(scaled_offset)
@@ -209,9 +210,11 @@ def multi_offset (contours, offset, z_level=None):
         # A list of offsets for each contour
         for off_val in scaled_offset:
             polygons = pco.Execute(off_val)
+            n_inner_contours = len(polygons)
             for poly in polygons:
                 solution_e.append(poly)
     contours_offset = []
+    infill_contours = []
     solutions = pyclipper.scale_from_clipper(solution_e)
     for s in solutions:
         # Add initial point to the end of each contour to close it
@@ -225,7 +228,8 @@ def multi_offset (contours, offset, z_level=None):
             b = np.ones((solution.shape[0], 1)) * z_level
             solution = np.concatenate((solution,b), axis = 1)
         contours_offset.append(solution)
-    return contours_offset
+    infill_contours = contours_offset[-n_inner_contours:]
+    return contours_offset, infill_contours
 
 
 if __name__ == '__main__':

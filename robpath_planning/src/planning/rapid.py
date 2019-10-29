@@ -1,3 +1,4 @@
+import math
 import ftplib
 import os
 import rospkg
@@ -327,7 +328,7 @@ class Rapid():
                         # Add offset point if necessary
                         delta_x = p[0] - p_ant[0]
                         delta_y = p[1] - p_ant[1]
-                        delta_t = delta_x + delta_y
+                        delta_t = math.sqrt(delta_x**2 + delta_y**2)
                         self.offset_x = self.offset * delta_x / delta_t
                         self.offset_y = self.offset * delta_y / delta_t
                         if self.feeder_type == 'tps5000':

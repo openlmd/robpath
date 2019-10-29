@@ -2,6 +2,8 @@ import os
 import json
 import numpy as np
 import calculate as calc
+import planning as plan
+import math
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
@@ -43,6 +45,7 @@ class Part(Mesh):
         self.track_width = width
         self.track_overlap = overlap
         self.track_distance = (1 - overlap) * width
+        self.perimeters = 0
 
     def get_track(self):
         return self.track_height, self.track_width, self.track_overlap
@@ -144,7 +147,7 @@ class RobPath():
     def load_gcode(self, filename):
         import pygcode
         from pygcode import Line
-        z_offset = -0.0
+        z_offset = 0
         z = 0.0 + z_offset
         x = 0.0
         y = 0.0
@@ -155,6 +158,8 @@ class RobPath():
         with open(filename, 'r') as fh:
             for line_text in fh.readlines():
                 line = Line(line_text)
+                if len(line.block.words) == 2:
+                    continue
                 extrude_move = False
                 for letterCode in line.block.words:
                     if letterCode.letter == 'E':
@@ -185,7 +190,7 @@ class RobPath():
                         parray = np.array([x, y, z])
                         if z >= 0.0:
                             puntos.append(parray)
-        if puntos:
+        if len(puntos) > 1:
             lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         focus = 0
@@ -291,7 +296,7 @@ class RobPath():
                 base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
                 tmatrix = np.dot(base_matrix, matrix)
             trans, quat = calc.matrix_to_quatpose(tmatrix)
-            tpath.append((trans, orientation, process))
+            tpath.append([trans, orientation, process])
         return tpath
 
     def transform_slice(self, slice, r):
@@ -468,18 +473,20 @@ class RobPath():
             degrees.append(self.part.filling)
         for n, slice in enumerate(slices):
             if slice is not None:
-                self.slices.append(slice)
+                # self.slices.append(slice)
+                offset_values = []
+                offset_values.append([-self.part.track_distance * off for off in range(self.part.perimeters + 1)])
+                offsets_slices, infill_slices = plan.multi_offset(slice, offset_values[0], self.levels[self.k])
                 if filled:
                     tool_path = self.planning.get_path_from_slices(
-                        [slice], self.part.track_distance, self.pair, focus=self.part.focus,
+                        [infill_slices[:]], self.part.track_distance, self.pair, focus=self.part.focus,
                         one_dir=self.part.one_dir_fill, invert=self.part.invert_control, degrees=degrees[n])
                     if self.part.repair_work:
                         tool_path = self.repair_tool_path(tool_path)
                     self.path.extend(tool_path)
                 if contour:
                     tool_path = self.planning.get_path_from_slices(
-                        [slice], focus=self.part.focus)
-                    #  TODO: Repair
+                        [offsets_slices[:]], focus=self.part.focus)
                     self.path.extend(tool_path)
         if self.part.invert_fill_x:
             self.pair = not self.pair
