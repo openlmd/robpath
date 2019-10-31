@@ -2,3 +2,4 @@
 *~
 .vscode
 robpath_planning/build
+robpath_planning/src/planning/testing.py

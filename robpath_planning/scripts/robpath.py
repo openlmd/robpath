@@ -368,6 +368,7 @@ class RobPathUI(QtGui.QMainWindow):
                     length = self.robpath.planning.path_length(self.robpath.path)
                     laser_time = length[0] / self.sbSpeed.value()
                     travel_time = length[1] / self.sbTravel.value()
+                    laser_time, travel_time = self.robpath.get_process_time()
                     time = laser_time + travel_time
                     time_str = (str(round(time / 60, 2)) + ' min:\n'
                                 + str(round(laser_time / 60, 2)) + ' process + '
@@ -382,6 +383,7 @@ class RobPathUI(QtGui.QMainWindow):
                     length = self.robpath.planning.path_length(self.robpath.path)
                     laser_time = length[0] / self.sbSpeed.value()
                     travel_time = length[1] / self.sbTravel.value()
+                    laser_time, travel_time = self.robpath.get_process_time()
                     time = laser_time + travel_time
                     time_str = (str(round(time / 60, 2)) + ' min:\n'
                                 + str(round(laser_time / 60, 2)) + ' process + '
@@ -392,6 +394,17 @@ class RobPathUI(QtGui.QMainWindow):
                     self.robpath.load_orientations(filename)
                     self.new_xml = True
                     self.timer.start(100)
+                    self.btnSaveRapid.setEnabled(True)
+                    length = self.robpath.planning.path_length(self.robpath.path)
+                    laser_time = length[0] / self.sbSpeed.value()
+                    travel_time = length[1] / self.sbTravel.value()
+                    laser_time, travel_time = self.robpath.get_process_time()
+                    time = laser_time + travel_time
+                    time_str = (str(round(time / 60, 2)) + ' min:\n'
+                                + str(round(laser_time / 60, 2)) + ' process + '
+                                + str(round(travel_time / 60, 2)) + ' travel')
+                    print time_str
+                    self.labelTime.setText(time_str)
 
         except AttributeError as error:
             print error
@@ -518,7 +531,7 @@ class RobPathUI(QtGui.QMainWindow):
         routine = self.rapid.path2rapid_beta(self.robpath.path)
         self.rapid.save_file(filename, routine)
         filename = filename.split('.')[0] + '.xml'
-        self.robpath.save_xml(filename, self.robpath.path)
+        #TODO: self.robpath.save_xml(filename, self.robpath.path)
         #self.rapid.upload_file(filename, directory)
         QtGui.QMessageBox.information(
             self, "Export information", "Routine exported to the robot.")

@@ -133,12 +133,19 @@ class Planning:
         return tool_path
 
     def get_path_from_fill_lines(self, fill_lines):
+        '''
+        Returns list with a layer
+        [layer[track[point[xyz[]quat[]]]]]
+        '''
         tool_path = []
+        layer = []
         for track in fill_lines:
             if len(track) > 1:
-                for k in range(0, len(track)-1):
-                    tool_path.append([track[k], self.orientation, True])
-                tool_path.append([track[-1], self.orientation, False])
+                new_track = []
+                for point in track:
+                    new_track.append([point, self.orientation])
+                layer.append(new_track)
+        tool_path.append(layer)
         return tool_path
 
     def get_path_from_slices(self, slices, track_distance=None, pair=False, focus=0, one_dir=False, invert=False, degrees=None):
@@ -149,14 +156,17 @@ class Planning:
         for k, slice in enumerate(slices):
             if slice is not None:
                 if track_distance is None:
+                    path_slice = []
                     for contour in slice:
+                        new_track = []
 #                    if len(slice) == 1:
 #                        contour = slice[0]
 #                    else:
 #                        contour = slice[1]
-                        for point in contour[:-1]:
-                            path.append([point, local_orientation, True])
-                        path.append([contour[-1], local_orientation, False])
+                        for point in contour:
+                            new_track.append([point, local_orientation])
+                        path_slice.append(new_track)
+                    path.append(path_slice)                    
                 else:
                     fill_lines = self.get_grated(slice, track_distance, one_dir, invert, degrees)
                     #if self.start_point == 'max':
@@ -164,23 +174,36 @@ class Planning:
                     if pair:  # Controls the starting point of the next layer
                         fill_lines.reverse()
                     pair = not pair
-                    path.extend(self.get_path_from_fill_lines_old(fill_lines))
+                    path.extend(self.get_path_from_fill_lines(fill_lines))
             #t1 = time.time()
             #print '[%.2f%%] Time to path %.3f s.' % (
             #    (100.0 * (k + 1)) / len(slices), t1 - t0)
-        return self.translate_path(path, np.array([0, 0, focus]))
+        return path
 
     def translate_path(self, path, position):
         return [[position + pnt, orient, proc] for (pnt, orient, proc) in path]
 
     def path_length(self, path):
         laser_dist, travel_dist = 0, 0
-        for k, (point, orient, process) in enumerate(path[:-1]):
-            dist = calc.distance(path[k][0], path[k+1][0])
-            if process:
+        for layer in path:
+            for track in layer:
+                for n in range(len(track[:-1])):
+                    dist = calc.distance(track[n][0], track[n+1][0])
                 laser_dist = laser_dist + dist
-            else:
-                travel_dist = travel_dist + dist
+        travel_layer = 0
+        for l in range(len(path[:-1])):
+            last_current_p = path[l][-1][-1][0]
+            first_next_p = path[l+1][0][0][0]
+            dist = calc.distance(last_current_p, first_next_p)
+            travel_layer = travel_layer + dist
+        travel_track = 0
+        for layer in path:
+            for t in range(len(layer[:-1])):
+                last_current_p = layer[t][-1][0]
+                first_next_p = layer[t+1][0][0]
+                dist = calc.distance(last_current_p, first_next_p)
+                travel_track = travel_track + dist
+        travel_dist = travel_track + travel_layer
         return laser_dist, travel_dist
 
     def path_time(self, length, laser_speed, travel_speed):
@@ -239,7 +262,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', type=str,
-                        default='/home/baltasar/Documentos/celda4/proper/tacos gnc/taco.stl',#/home/baltasar/Documentos/proper/points datapixel/P1DevMap/P1ModelDevMap.stl /home/baltasar/Documentos/celda4/proper/tacos gnc/taco.stl
+                        default='../../data/piece7.stl',
                         help='path to input stl data file')
     args = parser.parse_args()
     filename = args.data
@@ -248,20 +271,25 @@ if __name__ == '__main__':
     mesh = Mesh(filename)
     mesh.resort_triangles()
 
-    slice = mesh.get_slice(7.98)
-    # t0 = time.time()
-    # slices = mesh.get_mesh_slices(0.5)
-    # t1 = time.time()
-    # print 'Time for slices:', t1 - t0
-    slices = []
-    slices.append(slice)
-    fp = slice[0][0]
-    lp = slice[0][-1]
+    slice = mesh.get_slice(30)
+    t0 = time.time()
+    #slices = mesh.get_mesh_slices(2.5)
+    t1 = time.time()
+    print 'Time for slices:', t1 - t0
+    # slices.append(slice)
 
     planning = Planning()
 
     t0 = time.time()
-    path = planning.get_path_from_slices(slices, 2.16, degrees=45.0)
+    planning.start_point = 'min'
+    planning.start_point_dir = 'min'
+    slices = [slice]
+    offsets, infills = multi_offset(slice, [0, -1, -2], 30)
+    slices.append([np.flip(off, axis=0) for off in offsets])
+    path = planning.get_path_from_slices(slices, one_dir=False ,degrees=0.0)
+    infill_slices = [infills[:]]
+    path = planning.get_path_from_slices(infill_slices, 2.2, one_dir=False ,degrees=0.0)
+    # print path
     t1 = time.time()
     print 'Time for path:', t1 - t0
 

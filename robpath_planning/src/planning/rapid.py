@@ -41,94 +41,6 @@ class Rapid():
         self.stirrer = stirrer
         self.turntable = turntable
 
-    def path2rapid(self, path):
-        RAPID_TEMPLATE = 'MODULE Etna\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    PERS tooldata toolEtna:=%(tool)s;\n'
-        RAPID_TEMPLATE += '    PERS wobjdata wobjEtna:=%(wobj)s;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    VAR triggdata laserON;\n'
-        RAPID_TEMPLATE += '    VAR triggdata laserOFF;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    CONST speeddata vl:=[%(speed)i,500,5000,1000];\n' #CONST speeddata v15 := [15,500,5000,1000];
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    %(targets)s\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += 'PROC cladding()\n'
-        RAPID_TEMPLATE += '    %(moves)s\n'
-        RAPID_TEMPLATE += 'ENDPROC\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += 'PROC mainEtna()\n'
-        RAPID_TEMPLATE += '    Set Do_RF_MainOn;\n'
-        RAPID_TEMPLATE += '    Set Do_RF_StandByOn;\n'
-        RAPID_TEMPLATE += '    WaitDI DI_RF_LaserBeamReady,1;\n'
-        RAPID_TEMPLATE += '    WaitDI DI_RF_GeneralFault,0;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    SetGO GO_Program_Rf, 0;\n' # set the program for control of laser power - prog 5
-        RAPID_TEMPLATE += '    WaitTime 1;\n'
-        RAPID_TEMPLATE += '    !SetGO GoLDL_Pwr3, %(power)i;\n' # set the laser power - 2200 W
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    TriggIO laserON, 0\DOp:=Do_RF_ExterGate, 1;\n'
-        RAPID_TEMPLATE += '    TriggIO laserOFF, 0\DOp:=Do_RF_ExterGate, 0;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    Set DoWeldGas;\n'
-        RAPID_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
-        RAPID_TEMPLATE += '    MedicoatL1 "OFF", %(carrier)i, %(stirrer)i, %(turntable)i;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    ConfL \Off;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[-1,0,-1,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,toolEtna\WObj:=wobjEtna;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    cladding;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    MoveL [[0.0,0.0,100.0],[1.0,0.0,0.0,0.0],[-1,0,-1,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]],v80,z0,toolEtna\WObj:=wobjEtna;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    Reset doMdtPL2On;\n'
-        RAPID_TEMPLATE += '    Reset doMdtPL1On;\n'
-        RAPID_TEMPLATE += '    Reset DoWeldGas;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += '    Reset Do_RF_StandByOn;\n'
-        RAPID_TEMPLATE += '    !Reset Do_RF_MainOn;\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += 'ENDPROC\n'
-        RAPID_TEMPLATE += '\n'
-        RAPID_TEMPLATE += 'ENDMODULE\n'
-        # Target points definition
-        targets = ''
-        for k in range(len(path)):
-            p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget T%i:=[[%f,%f,%f],[%f,%f,%f,%f],[-1,0,-1,0],[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
-        # Movement definition
-        moves = '!Reset doLDLStartST;\n'
-        for k in range(len(path)):
-            p, q, process = path[k]
-            if process:
-                #moves = '\n'.join([moves, '    Set doLDLStartST;'])
-                #moves = '\n'.join([moves, '    MoveL T%i,vl,z0,toolEtna\WObj:=wobjEtna;' %(k)])
-                if k < len(path)-1 and path[k+1][2]:
-                    # If the track continues in the next point. Don't OFF the laser.
-                    moves = '\n'.join([moves, '    TriggL T%i,vl,laserON,z0,toolEtna\WObj:=wobjEtna;' % (k)])
-                else:
-                    moves = '\n'.join([moves, '    TriggL T%i,vl,laserOFF,z0,toolEtna\WObj:=wobjEtna;' % (k)])
-            else:
-                #moves = '\n'.join([moves, '    Reset doLDLStartST;'])
-                #moves = '\n'.join([moves, '    MoveL T%i,%s,%s,toolEtna\WObj:=wobjEtna;' %(k, self.travel_speed, self.travel_zone)])
-                moves = '\n'.join([moves, '    TriggL T%i,%s,laserON,%s,toolEtna\WObj:=wobjEtna;' %(k, self.travel_speed, self.travel_zone)])
-        moves = '\n'.join([moves, '\n!Reset doLDLStartST;'])
-
-        tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
-        wobj = '[FALSE,TRUE,"",[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[[0,0,0],[1,0,0,0]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
-
-        return RAPID_TEMPLATE %{'tool': tool,
-                                'wobj': wobj,
-                                'speed': self.speed,
-                                'targets': targets,
-                                'moves': moves,
-                                'carrier': self.carrier,
-                                'stirrer': self.stirrer,
-                                'turntable': self.turntable,
-                                'power': self.power}
-
     def rapid_laser_conf(self):
         LASER_TEMPLATE = ''
         if self.laser_type == 'rofin_rf':
@@ -223,7 +135,7 @@ class Rapid():
                 RAPID_TEMPLATE += line
         return RAPID_TEMPLATE
 
-    def path2rapid_beta(self, path, module_name='Robpath'):
+    def path2rapid_beta_old(self, path, module_name='Robpath'):
         tool_name = 'tool' + module_name
         wobj_name = 'wobj' + module_name
         speed_name = 'vRobpath'
@@ -355,6 +267,98 @@ class Rapid():
             # Update last point
             laser_track = process # Same as process_ant
             p_ant, q_ant, process_ant = path[k]
+        moves = '\n'.join([moves, '\n'])
+
+        tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
+        wobj = '[FALSE,FALSE,"STN1",[[0,0,0],[1,0,0,0]],[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
+
+        return RAPID_TEMPLATE %{'module_name': module_name,
+                                'laser_out': laser_out,
+                                'laser_conf': laser_conf,
+                                'laser_stop': laser_stop,
+                                'feeder_conf': feeder_conf,
+                                'feeder_stop': feeder_stop,
+                                'feeder_triggs': feeder_triggs,
+                                'tool': tool,
+                                'tool_name': tool_name,
+                                'wobj': wobj,
+                                'wobj_name': wobj_name,
+                                'speed': self.speed,
+                                'speed_t': self.speed_t,
+                                'targets': targets,
+                                'moves': moves}
+
+    def first_process_point(self):
+        #TODO
+        pass
+
+    def path2rapid_beta(self, path, module_name='Robpath'):
+        tool_name = 'tool' + module_name
+        wobj_name = 'wobj' + module_name
+        speed_name = 'vRobpath'
+        speed_t_name = 'vRobpathT'
+        # TODO: Get powder and laser parameters
+
+        if self.laser_type == 'rofin_rf':
+            laser_out = 'Do_RF_ExterGate'
+        elif self.laser_type == 'trudisk':
+            laser_out = 'TdoPStartStat'
+        elif self.laser_type == 'waam':
+            laser_out = 'doFr1ArcOn'
+
+        laser_conf = self.rapid_laser_conf()
+        feeder_conf = self.rapid_feeder_conf(module_name)
+        laser_stop = self.rapid_laser_stop()
+        feeder_stop = self.rapid_feeder_stop()
+
+        RAPID_TEMPLATE = self.load_template()
+
+        feeder_triggs = ''
+        if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
+            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireON%s;' % (module_name)])
+            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireOFF%s;' % (module_name)])
+
+        # Target points definition
+        targets = ''
+        n_targets = 0
+        # Movement definition
+        moves = ''
+        self.offset_x = 0
+        self.offset_y = 0
+        for l, layer in enumerate(path):
+            moves = '\n'.join([moves, '!SLICE %i' % (l)])
+            for t, track in enumerate(layer):
+                moves = '\n'.join([moves, '!TRACK %i' % (t)])
+                targets = '\n'.join([targets, '!TRACK %i' % (t)])
+                for np, point in enumerate(track):
+                    p, q = point
+                    targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[ext_axis0,ext_axis1,ext_axis2,9E+09,9E+09,9E+09]];' %(n_targets, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
+                    if np == 0:
+                        #Initial point of a track
+                        if self.offset_z != 0 or self.offset != 0:
+                            delta_x = p[0] - track[np+1][0][0]
+                            delta_y = p[1] - track[np+1][0][1]
+                            delta_t = math.sqrt(delta_x**2 + delta_y**2)
+                            self.offset_x = self.offset * delta_x / delta_t
+                            self.offset_y = self.offset * delta_y / delta_t
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (n_targets, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (n_targets, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                    elif np == len(track)-1:
+                        #Last point of a track
+                        moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s \WObj:=%s;' % (n_targets, speed_name, tool_name, wobj_name)])
+                        moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                        if self.offset_z != 0 or self.offset != 0:
+                            delta_x = p[0] - track[np-1][0][0]
+                            delta_y = p[1] - track[np-1][0][1]
+                            delta_t = math.sqrt(delta_x**2 + delta_y**2)
+                            self.offset_x = self.offset * delta_x / delta_t
+                            self.offset_y = self.offset * delta_y / delta_t
+                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (n_targets, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
+                    else:
+                        #Intermediate point
+                        moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (n_targets, speed_name, tool_name, wobj_name)])
+                    n_targets += 1
         moves = '\n'.join([moves, '\n'])
 
         tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])

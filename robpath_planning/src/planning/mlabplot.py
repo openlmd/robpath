@@ -183,30 +183,42 @@ class MPlot3D():
         #mlab.outline()
 
     def draw_path(self, path, color=(0.7, 0.5, 0.3)):
-        points, vectors, processes = [], [], []
-        for k in range(len(path)-1):
-            points.append(path[k][0])
-            vectors.append(path[k+1][0] - path[k][0])
-            processes.append(path[k][2])
-        points, vectors = np.array(points), np.array(vectors)
-        processes = np.array(processes)
-        pnts, vctrs = points[processes], vectors[processes]
-        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
-                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+        process_points = []
+        process_vectors = []
+        travel_points = []
+        travel_vectors = []
+        for l in range(len(path)):
+            layer = path[l]
+            if l < len(path)-1:
+                travel_points.append(path[l][-1][-1][0])
+                travel_vectors.append(path[l+1][0][0][0] - path[l][-1][-1][0])
+            for t in range(len(layer)):
+                track = layer[t]
+                for p in range(len(track)-1):
+                    process_points.append(track[p][0])
+                    process_vectors.append(track[p+1][0] - track[p][0])
+                if t < len(layer)-1:
+                    travel_points.append(layer[t][-1][0])
+                    travel_vectors.append(layer[t+1][0][0] - layer[t][-1][0])
+        process_points = np.array(process_points)
+        process_vectors = np.array(process_vectors)
+        travel_points = np.array(travel_points)
+        travel_vectors = np.array(travel_vectors)
+        mlab.quiver3d(process_points[:, 0], process_points[:, 1], process_points[:, 2],
+                      process_vectors[:, 0], process_vectors[:, 1], process_vectors[:, 2],
                       color=color, mode='2ddash',
                       scale_factor=1, line_width=2.0)
-        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
-                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+        mlab.quiver3d(process_points[:, 0], process_points[:, 1], process_points[:, 2],
+                      process_vectors[:, 0], process_vectors[:, 1], process_vectors[:, 2],
                       color=color, mode='arrow',
                       scale_factor=1, scale_mode='scalar', line_width=2.0)
-        pnts = points[np.bitwise_not(processes)]
-        vctrs = vectors[np.bitwise_not(processes)]
-        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
-                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+
+        mlab.quiver3d(travel_points[:, 0], travel_points[:, 1], travel_points[:, 2],
+                      travel_vectors[:, 0], travel_vectors[:, 1], travel_vectors[:, 2],
                       color=(0.6, 0.6, 0.6), mode='2ddash',
                       scale_factor=1, line_width=1.0)
-        mlab.quiver3d(pnts[:, 0], pnts[:, 1], pnts[:, 2],
-                      vctrs[:, 0], vctrs[:, 1], vctrs[:, 2],
+        mlab.quiver3d(travel_points[:, 0], travel_points[:, 1], travel_points[:, 2],
+                      travel_vectors[:, 0], travel_vectors[:, 1], travel_vectors[:, 2],
                       color=(0.6, 0.6, 0.6), mode='arrow',
                       scale_factor=1, scale_mode='scalar', line_width=1.0)
 

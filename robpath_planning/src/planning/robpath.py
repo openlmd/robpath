@@ -77,6 +77,7 @@ class RobPath():
         self.parts.append(self.part)
 
     def load_xml(self, filename):
+        #TODO: modificar path
         tree = ET.parse(filename)
         root = tree.getroot()
         self.path = []
@@ -131,8 +132,8 @@ class RobPath():
                                             self.params_group.append(parameters_index)
                                     lineas.append(puntos)
         tool_path = self.planning.get_path_from_fill_lines(lineas)
-        focus = 0
-        tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
+        # focus = 0
+        # tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
         '''print self.path:
         [(array([0.45, 0.45, 0.45]), array([-0.113,  0.   ,  0.   ,  0.994]), True), 
@@ -145,6 +146,7 @@ class RobPath():
         '''
 
     def load_gcode(self, filename):
+        #TODO: Modificar path
         import pygcode
         from pygcode import Line
         z_offset = 0
@@ -192,9 +194,10 @@ class RobPath():
                             puntos.append(parray)
         if len(puntos) > 1:
             lineas.append(puntos)
+        #TODO: Crear funcion especifica para anhadir orientacions aos ptos
         tool_path = self.planning.get_path_from_fill_lines(lineas)
-        focus = 0
-        tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
+        # focus = 0
+        # tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
 
     def load_orientations(self, filename):
@@ -203,18 +206,20 @@ class RobPath():
         [[[[[148.713, 100.0, 1.7, 0, 1.065402062407932],...]]]]]
         '''
         import ast
+        self.path = []
         layer_ordered_points = []
         with open(filename, 'r') as fh:
             for line_text in fh.readlines():
                 layer_ordered_points = ast.literal_eval(line_text)
-        points = []
+        self.path.extend(layer_ordered_points)
+        """ points = []
         for l in layer_ordered_points:
             for t in l:
                 for p in t:
                     ## TODO: REvisar porque hai un nivel mais
                     for incognita in p:
                         points.append(incognita)
-        self.update_orientations(points)
+        self.update_orientations(points) """
 
     def update_orientations(self, points):
         '''
@@ -330,15 +335,21 @@ class RobPath():
 
     def transform_path(self, path, r=None):
         tpath = []
-        for position, orientation, process in path:
-            matrix = calc.quatpose_to_matrix(position, orientation)
-            if r is None:
-                tmatrix = np.dot(self.base_frame, matrix)
-            else:
-                base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
-                tmatrix = np.dot(base_matrix, matrix)
-            trans, quat = calc.matrix_to_quatpose(tmatrix)
-            tpath.append([trans, orientation, process])
+        for layer in path:
+            tlayer = []
+            for track in layer:
+                ttrack = []
+                for position, orientation in track:
+                    matrix = calc.quatpose_to_matrix(position, orientation)
+                    if r is None:
+                        tmatrix = np.dot(self.base_frame, matrix)
+                    else:
+                        base_matrix = calc.rpypose_to_matrix([0,0,0], [0,0,np.radians(r)])
+                        tmatrix = np.dot(base_matrix, matrix)
+                    trans, quat = calc.matrix_to_quatpose(tmatrix)
+                    ttrack.append([trans, orientation])
+                tlayer.append(ttrack)
+            tpath.append(tlayer)
         return tpath
 
     def transform_slice(self, slice, r):
@@ -498,6 +509,7 @@ class RobPath():
 
 
     def update_process_alfa(self, filled=True, contour=False):
+        #TODO:
         tool_path = []
         slices = []
         degrees = []
@@ -573,7 +585,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--mesh', type=str,
-                        default='../../data/piece0.stl',
+                        default='/home/baltasar/catkin_ws/src/robpath/robpath_planning/data/piece0.stl',
                         help='path to input stl data file')
     args = parser.parse_args()
 
@@ -581,11 +593,16 @@ if __name__ == "__main__":
 
     robpath = RobPath()
     robpath.load_mesh(filename)
-    robpath.part.set_track(0.5, 2.5, 0.4)
+    robpath.part.set_track(1.5, 2.5, 0.4)
     robpath.part.set_process(8, 1000, 0.0)
+    robpath.part.filling = 0.0
+    robpath.part.invert_fill_x = False
+    robpath.part.invert_fill_y = True
+    robpath.planning.start_point_dir = 'max'
     levels = robpath.init_process()
-    for k, level in enumerate(levels):
-        robpath.update_process(filled=True, contour=True)
+    #robpath.levels = [12.5]
+    for k, level in enumerate(robpath.levels):
+        robpath.update_process_alfa(filled=True, contour=True)
 
     mplot3d = MPlot3D()
     #mplot3d.draw_mesh(robpath.part)
