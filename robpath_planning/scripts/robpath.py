@@ -138,6 +138,8 @@ class RobPathUI(QtGui.QMainWindow):
         self.rapid = Rapid()
         self.enableParts(False)
 
+        self.updateSettings()
+
     def enableParts(self, value):
         self.btnProcessMesh.setEnabled(value)
         self.btnSelectAll.setEnabled(value)
@@ -171,7 +173,9 @@ class RobPathUI(QtGui.QMainWindow):
         if filename.split('.')[-1] == 'json':
             with open(filename) as data_file:
                 self.settings = json.load(data_file)
+        self.updateSettings()
 
+    def updateSettings(self):
         if "overlap" in self.settings["configuration"]:
              self.sbOverlap.setValue(self.settings["configuration"]["overlap"])
         if "width" in self.settings["configuration"]:

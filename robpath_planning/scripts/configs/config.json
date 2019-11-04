@@ -1,22 +1,57 @@
 {
   "configuration": {
-    "feeder_type": "tps5000waam",
-    "height": 1.65,
-    "laser_type": "waam",
+    "base_frame": [
+      [
+        -145.911,
+        -202.236,
+        13.7597
+      ],
+      [
+        1.0000,
+        0.0000,
+        0.0000,
+        0.0000
+      ]
+    ],
+    "disparity": "filling",
+    "feeder_type": "gtv",
+    "fill_direction": 0.0,
+    "height": 2.0,
+    "laser_type": "trudisk",
     "offsets": {
       "line": 0,
-      "z_dir": 5
+      "z_dir": 0
     },
-    "overlap": 55.0,
+    "one_way": true,
+    "overlap": 5.0,
     "process_speed": 8.0,
+    "reverse_x_start": true,
+    "reverse_y_start": true,
     "robot": "abb",
-    "stop_layer": 1,
-    "travel_speed": 55.0,
-    "width": 2.10,
     "start_point": "min",
-    "disparity": "filling"
+    "start_point_dir": "max",
+    "stop_layer": 1,
+    "tool": [
+      [
+        227.49,
+        -23.1497,
+        79.8447
+      ],
+      [
+        0.70711,
+        0,
+        -0.70711,
+        0
+      ]
+    ],
+    "travel_speed": 55.0,
+    "width": 2.1
   },
   "limits": {
+    "disparity": [
+      "coating",
+      "filling"
+    ],
     "feeder_type": [
       "gtv",
       "medicoat",
@@ -34,11 +69,8 @@
     ],
     "start_point": [
       "max",
+      "mid",
       "min"
-    ],
-    "disparity": [
-      "coating",
-      "filling"
     ]
   }
 }
