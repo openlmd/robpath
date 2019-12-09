@@ -35,7 +35,7 @@ PROC main%(module_name)s()
 
     claddingRobpath;
 
-    MoveJ Offs(Trobpath0, 0, 0, 60.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    MoveL Offs(Trobpath0, 0, 0, 60.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
 
     %(feeder_stop)s
 

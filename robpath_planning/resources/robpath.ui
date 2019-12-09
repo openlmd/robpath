@@ -750,6 +750,9 @@ border: 1px solid gray;</string>
           <property name="maximum">
            <double>100.000000000000000</double>
           </property>
+          <property name="minimum">
+           <double>-1000.000000000000000</double>
+          </property>
           <property name="singleStep">
            <double>5.000000000000000</double>
           </property>
