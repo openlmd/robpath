@@ -30,6 +30,8 @@ class Rapid():
         
         self.dynamic_params = []
         self.params_group = []
+        self.extrusions = None
+        self.feedrate_speed = 0
 
     def set_process(self, speed, power, travel=50):
         self.speed = speed
@@ -65,6 +67,9 @@ class Rapid():
             LASER_TEMPLATE += '    WaitDi TdiLaserReady, 1;\n'
         elif self.laser_type == 'waam':
             LASER_TEMPLATE += '\n! Sin inicializacion laser (waam)\n'
+        elif self.laser_type == 'fdm-serial':
+            LASER_TEMPLATE += '\n    TPWrite "Comprobar equipamento!";\n'
+            LASER_TEMPLATE += '    Stop;\n'
         return LASER_TEMPLATE %{'power': self.power}
 
     def rapid_laser_stop(self):
@@ -78,24 +83,29 @@ class Rapid():
             LASER_TEMPLATE += '    Reset TdoExtActiv;'
         elif self.laser_type == 'waam':
             LASER_TEMPLATE += '\n! Sin parada laser (waam)\n'
+        elif self.laser_type == 'fdm-serial':
+            LASER_TEMPLATE += '\n    TPWrite "Programa finalizado!";\n'
         return LASER_TEMPLATE
 
     def rapid_feeder_conf(self, module_name='Robpath'):
-        FEEDER_TEMPLATE = '    Set DoRootGas;\n'
+        FEEDER_TEMPLATE = '\n'
         if self.feeder_type == 'tps5000':
-            FEEDER_TEMPLATE += 'Set DoCossJet;\n'
-            FEEDER_TEMPLATE += 'PulseDO\PLength:=0.5,doTPSReset;\n'
-            FEEDER_TEMPLATE += 'Set doTPSReady;\n'
-            FEEDER_TEMPLATE += 'Set doTPSOP0;\n'
-            FEEDER_TEMPLATE += 'Reset doTPSOP1;\n'
-            FEEDER_TEMPLATE += 'Set doTPSOP2;\n'
-            FEEDER_TEMPLATE += '!SetGO GoTPSJobL, 100;\n'
-            FEEDER_TEMPLATE += 'TriggEquip wireON'+module_name+', 0 \Start, 0 \DOp:=doTPSWireF, 1;\n'
-            FEEDER_TEMPLATE += 'TriggEquip wireOFF'+module_name+', 0, 0 \DOp:=doTPSWireF, 0;\n'
+            FEEDER_TEMPLATE = '    Set DoRootGas;\n'
+            FEEDER_TEMPLATE += '    Set DoCossJet;\n'
+            FEEDER_TEMPLATE += '    PulseDO\PLength:=0.5,doTPSReset;\n'
+            FEEDER_TEMPLATE += '    Set doTPSReady;\n'
+            FEEDER_TEMPLATE += '    Set doTPSOP0;\n'
+            FEEDER_TEMPLATE += '    Reset doTPSOP1;\n'
+            FEEDER_TEMPLATE += '    Set doTPSOP2;\n'
+            FEEDER_TEMPLATE += '    !SetGO GoTPSJobL, 100;\n'
+            FEEDER_TEMPLATE += '    TriggEquip wireON'+module_name+', 0 \Start, 0 \DOp:=doTPSWireF, 1;\n'
+            FEEDER_TEMPLATE += '    TriggEquip wireOFF'+module_name+', 0, 0 \DOp:=doTPSWireF, 0;\n'
         elif self.feeder_type == 'medicoat':
+            FEEDER_TEMPLATE = '    Set DoRootGas;\n'
             FEEDER_TEMPLATE += '    !MedicoatL2 "OFF", 5, 20, 7.5;\n' # gas de arrastre, stirrer, turntable
             FEEDER_TEMPLATE += '    MedicoatL1 "OFF", %(carrier)i, %(stirrer)i, %(turntable)i;'
         elif self.feeder_type == 'gtv':
+            FEEDER_TEMPLATE = '    Set DoRootGas;\n'
             FEEDER_TEMPLATE += '    SetAO AoGTV_ExternDisk, 35;\n'
             FEEDER_TEMPLATE += '    SetAO AoGTV_ExternMassFlow, 26.6;\n'
             FEEDER_TEMPLATE += '    Set doGTV_StartExtern;\n'
@@ -104,6 +114,14 @@ class Rapid():
             FEEDER_TEMPLATE += '\nSet doTPSReady;\nSet doFr1RobotReady;\nSet doFr1ErrorReset;\nSet doTPSReset;\nSetGo goFr1Mode,1;\nReset doTPSOP0;\nSet doTPSOP1;\nReset doTPSOP2;\nSet doFr1WeldingSim;\n'
             FEEDER_TEMPLATE += 'TriggEquip wireON'+module_name+', 2 \Start, 0 \DOp:=doFr1ArcOn, 1;\n'
             FEEDER_TEMPLATE += 'TriggEquip wireOFF'+module_name+', 2, 0 \DOp:=doFr1ArcOn, 0;\n'
+        elif self.feeder_type == 'fdm-serial':
+            f_speed = self.feedrate_speed
+            #TODO: calcular F ou lela
+            FEEDER_TEMPLATE += '    Open "COM1:", pcwrite \Write;\n'
+            FEEDER_TEMPLATE += '    WaitTime 0.2;\n'
+            FEEDER_TEMPLATE += '    Write pcwrite, "F%f";\n' % (self.feedrate_speed)
+            FEEDER_TEMPLATE += '    Write pcwrite, "E10";\n'
+            FEEDER_TEMPLATE += '    Stop;\n'
         return FEEDER_TEMPLATE %{'carrier': self.carrier,
                                 'stirrer': self.stirrer,
                                 'turntable': self.turntable}
@@ -122,6 +140,8 @@ class Rapid():
             FEEDER_TEMPLATE += '    Reset DoRootGas;\n'
         elif self.feeder_type == 'tps5000waam':
             FEEDER_TEMPLATE += '\nReset doTPSReady;\n'
+        elif self.feeder_type == 'fdm-serial':
+            FEEDER_TEMPLATE += '   Close pcwrite;\n'
         return FEEDER_TEMPLATE
 
     def load_template(self):
@@ -134,159 +154,6 @@ class Rapid():
             for line in lines:
                 RAPID_TEMPLATE += line
         return RAPID_TEMPLATE
-
-    def path2rapid_beta_old(self, path, module_name='Robpath'):
-        tool_name = 'tool' + module_name
-        wobj_name = 'wobj' + module_name
-        speed_name = 'vRobpath'
-        speed_t_name = 'vRobpathT'
-        # TODO: Get powder and laser parameters
-
-        if self.laser_type == 'rofin_rf':
-            laser_out = 'Do_RF_ExterGate'
-        elif self.laser_type == 'trudisk':
-            laser_out = 'TdoPStartStat'
-        elif self.laser_type == 'waam':
-            laser_out = 'doFr1ArcOn'
-
-        laser_conf = self.rapid_laser_conf()
-        feeder_conf = self.rapid_feeder_conf(module_name)
-        laser_stop = self.rapid_laser_stop()
-        feeder_stop = self.rapid_feeder_stop()
-
-        RAPID_TEMPLATE = self.load_template()
-
-        feeder_triggs = ''
-        if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
-            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireON%s;' % (module_name)])
-            feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireOFF%s;' % (module_name)])
-
-        # Target points definition
-        targets = ''
-        for k in range(len(path)):
-            p, q, b = path[k]
-            targets = '\n'.join([targets, '    CONST robtarget Trobpath%i:=[[%f,%f,%f],[%f,%f,%f,%f],[0,0,0,0],[ext_axis0,ext_axis1,ext_axis2,9E+09,9E+09,9E+09]];' %(k, p[0], p[1], p[2], q[3], q[0], q[1], q[2])])
-        # Movement definition
-        moves = ''
-        laser_track = False
-        laser_set = False
-        return_track = False
-        p_ant, q_ant, process_ant = None, None, None
-        self.offset_x = 0
-        self.offset_y = 0
-        for k in range(len(path)):
-            p, q, process = path[k]
-            if len(path) == len(self.params_group):
-                if self.params_group[k] != -1:
-                    speed_name = '[%s,500,5000,1000]' % (self.dynamic_params[self.params_group[k]]['speed'])
-            if return_track:
-                #TODO: revisar se se poderia facer esto cando se move ao punto inicial
-                if p_ant is not None:
-                    if p_ant[2] < p[2]:
-                        # Slice identifier based on Z increment
-                        moves = '\n'.join([moves, '!SLICE at %f mm' % (p[2])])
-                # if self.feeder_type == 'tps5000':
-                #     moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
-                if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
-                    # In wire process, approach to point with offsets
-                    #TODO: cambiar a condicion do IF para que sexa sempre que hai offsets
-                    moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, -1 * self.offset_x, -1 * self.offset_y, self.offset_z, tool_name, wobj_name)])
-                else:
-                    pass
-                    #TODO: Este else sobra
-                    #moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                return_track = False
-            if laser_track and process:
-                # Point inside a track, multiline track
-                if self.feeder_type == 'tps5000waam':
-                    # Triggers only for process ON
-                    moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s, z0, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
-                else:
-                    # Set process signal and moveL
-                    if not laser_set:
-                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
-                        if self.feeder_type == 'tps5000':
-                            moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
-                            moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
-                        laser_set = True
-                    moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, z0, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
-            elif laser_track and not process:
-                # Last point of a track
-                if laser_set:
-                    # Last point of a multiline track
-                    laser_set = False
-                    if self.feeder_type == 'tps5000waam':
-                        # Trigger ending with process OFF
-                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserOFF%s, fine, %s \WObj:=%s;' % (k, speed_name, module_name, tool_name, wobj_name)])
-                    else:
-                        # Move to point and OFF process
-                        moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s \WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
-                        if self.feeder_type == 'tps5000':
-                            moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
-                        else:
-                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
-                else:
-                    # Last point of a single line track
-                    if self.feeder_type == 'tps5000':
-                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
-                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 1;'])
-                        moves = '\n'.join([moves, '    WaitTime %f;' % (self.start_lag)])
-                        moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s\WObj:=%s;' % (k, speed_name, tool_name, wobj_name)])
-                        moves = '\n'.join([moves, '    SetDO doTPSWireF, 0;'])
-                        #moves = '\n'.join([moves, '    TriggL Trobpath%i, vRobpath, laserON%s \T2:=laserOFF%s \T3:=wireON%s \T4:=wireOFF%s, z0, %s\WObj:=%s;' % (k, module_name, module_name, module_name, module_name, tool_name, wobj_name)])
-                    else:
-                        moves = '\n'.join([moves, '    TriggL Trobpath%i, %s, laserON%s \T2:=laserOFF%s, fine, %s\WObj:=%s;' % (k, speed_name, module_name, module_name, tool_name, wobj_name)])
-                    if self.offset > 0 or self.offset_z > 0:
-                        # Add offset point if necessary
-                        delta_x = p[0] - p_ant[0]
-                        delta_y = p[1] - p_ant[1]
-                        delta_t = math.sqrt(delta_x**2 + delta_y**2)
-                        self.offset_x = self.offset * delta_x / delta_t
-                        self.offset_y = self.offset * delta_y / delta_t
-                        if self.feeder_type == 'tps5000':
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, fine, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
-                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, (self.offset_z + 15), tool_name, wobj_name)])
-                        elif self.feeder_type == 'tps5000waam':
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
-                        else:
-                            # moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                            moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (k, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
-                            #moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, -30, 30, 0), vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-                    else:
-                        #TODO: Creo que non fai falta, revisar
-                        if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
-                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
-                    return_track = True
-            elif not laser_track and process:
-                # Initial point of a track
-                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-            else:
-                # Multiline travel movement
-                moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, z0, %s \WObj:=%s;' % (k, tool_name, wobj_name)])
-            # Update last point
-            laser_track = process # Same as process_ant
-            p_ant, q_ant, process_ant = path[k]
-        moves = '\n'.join([moves, '\n'])
-
-        tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
-        wobj = '[FALSE,FALSE,"STN1",[[0,0,0],[1,0,0,0]],[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
-
-        return RAPID_TEMPLATE %{'module_name': module_name,
-                                'laser_out': laser_out,
-                                'laser_conf': laser_conf,
-                                'laser_stop': laser_stop,
-                                'feeder_conf': feeder_conf,
-                                'feeder_stop': feeder_stop,
-                                'feeder_triggs': feeder_triggs,
-                                'tool': tool,
-                                'tool_name': tool_name,
-                                'wobj': wobj,
-                                'wobj_name': wobj_name,
-                                'speed': self.speed,
-                                'speed_t': self.speed_t,
-                                'targets': targets,
-                                'moves': moves}
 
     def first_process_point(self):
         #TODO
@@ -305,6 +172,8 @@ class Rapid():
             laser_out = 'TdoPStartStat'
         elif self.laser_type == 'waam':
             laser_out = 'doFr1ArcOn'
+        elif self.laser_type == 'fdm-serial':
+            laser_out = 'NO_LASER'
 
         laser_conf = self.rapid_laser_conf()
         feeder_conf = self.rapid_feeder_conf(module_name)
@@ -317,6 +186,8 @@ class Rapid():
         if self.feeder_type == 'tps5000' or self.feeder_type == 'tps5000waam':
             feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireON%s;' % (module_name)])
             feeder_triggs = '\n'.join([feeder_triggs, 'VAR triggdata wireOFF%s;' % (module_name)])
+        if self.feeder_type == 'fdm-serial':
+            feeder_triggs = '\n'.join([feeder_triggs, '    VAR iodev pcwrite;\n'])
 
         # Target points definition
         targets = ''
@@ -343,11 +214,16 @@ class Rapid():
                             self.offset_y = self.offset * delta_y / delta_t
                             moves = '\n'.join([moves, '    MoveL Offs(Trobpath%i, %f, %f, %f), vRobpathT, z0, %s \WObj:=%s;' % (n_targets, self.offset_x, self.offset_y, self.offset_z, tool_name, wobj_name)])
                         moves = '\n'.join([moves, '    MoveL Trobpath%i, vRobpathT, fine, %s \WObj:=%s;' % (n_targets, tool_name, wobj_name)])
-                        moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
+                        if self.laser_type == 'fdm-serial':
+                            extrudded = self.extrusions[l][t]
+                            moves = '\n'.join([moves, '    Write pcwrite, "E%f";' % (extrudded)])
+                        else:
+                            moves = '\n'.join([moves, '    SetDO %s, 1;' % (laser_out)])
                     elif np == len(track)-1:
                         #Last point of a track
                         moves = '\n'.join([moves, '    MoveL Trobpath%i, %s, fine, %s \WObj:=%s;' % (n_targets, speed_name, tool_name, wobj_name)])
-                        moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
+                        if self.laser_type != 'fdm-serial':
+                            moves = '\n'.join([moves, '    SetDO %s, 0;' % (laser_out)])
                         if self.offset_z != 0 or self.offset != 0:
                             delta_x = p[0] - track[np-1][0][0]
                             delta_y = p[1] - track[np-1][0][1]

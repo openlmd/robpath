@@ -226,29 +226,21 @@ class Mesh:
         if doubles > 0:
             print 'WARNING: Puntos dobles detectados'
         if not unsorted_lines == []:
-            # Arrange the line segments so that each segment leads to the
-            # nearest available segment. This is accomplished by using two
-            # list of lines, and at each step moving the nearest available
-            # line segment from the unsorted pile to the next slot in the
-            # sorted pile.
-            lines = []
-            for line in unsorted_lines:
-                lines.append(geometry.LineString(line))
-            multiline = geometry.MultiLineString(lines)
-            merged_line = ops.linemerge(multiline)
-            polygons = []
-            try:
-                for merged in merged_line:
-                    polygons.append(np.array(merged))
-            except TypeError:
-                # If there is only one contour
-                polygons.append(np.array(merged_line))
-            # for i, polygon in enumerate(polygons):
-            #     roll_point = self.get_roll_point(polygon)
-            #     if roll_point != 0:
-            #         polygons[i] = polygon[roll_point:] + polygon[:roll_point]
-            #     print 'Roll point: ' + str(roll_point)
-            return [poly.filter_polyline(polygon, dist=0.05) for polygon in polygons]  # Polygons filter
+            # Arrange the line segments
+            merged_polys = ops.polygonize_full(unsorted_lines)
+            polygons = list(merged_polys[0])
+            ordered_slice = []
+            for poly in polygons:
+                n = 0
+                for nested in polygons:
+                    if poly.within(nested.convex_hull):
+                        n += 1
+                if n % 2 == 1:
+                    ordered_slice.append(np.array(poly.exterior))
+                else:
+                    ordered_slice.append(np.flip(np.array(poly.exterior),0))
+            return ordered_slice
+            #return [poly.filter_polyline(polygon, dist=0.05) for polygon in polygons]  # Polygons filter
         else:
             return None
 

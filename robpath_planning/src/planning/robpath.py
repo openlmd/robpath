@@ -59,6 +59,52 @@ class Part(Mesh):
         return self.carrier, self.stirrer, self.turntable
 
 
+class GCodePart():
+    def __init__(self):
+        self.set_process(8, 1000, 0, 20)
+        self.set_track(0.7, 2.5, 0.45)
+        self.set_powder(20, 15, 5)
+        self.filling = 0.0
+        self.one_dir_fill = True
+        self.invert_fill_y = True
+        self.invert_fill_x = True
+        self.invert_control = True
+        self.repair_work = False
+
+    def resize_mesh(self, size):
+        self.scale(size / self.size)
+
+    def transform_mesh(self, mesh):
+        return mesh
+
+    def set_process(self, speed, power, focus, travel=20):
+        self.speed = speed
+        self.travel_speed = travel
+        self.power = power
+        self.focus = focus
+
+    def get_process(self):
+        return self.speed, self.power, self.focus
+
+    def set_track(self, height, width, overlap):
+        self.track_height = height
+        self.track_width = width
+        self.track_overlap = overlap
+        self.track_distance = (1 - overlap) * width
+        self.perimeters = 0
+
+    def get_track(self):
+        return self.track_height, self.track_width, self.track_overlap
+
+    def set_powder(self, carrier, stirrer, turntable):
+        self.carrier = carrier
+        self.stirrer = stirrer
+        self.turntable = turntable
+
+    def get_powder(self):
+        return self.carrier, self.stirrer, self.turntable
+
+
 class RobPath():
     def __init__(self):
         self.part = None
@@ -69,6 +115,7 @@ class RobPath():
         self.origin = np.array([.0, .0, .0])
         self.dynamic_params = []
         self.params_group = []
+        self.lenght_tracks = None
 
     def load_mesh(self, filename):
         self.part = Part(filename)
@@ -146,14 +193,17 @@ class RobPath():
         '''
 
     def load_gcode(self, filename):
-        #TODO: Modificar path
+        #TODO: Cargar E para FDM
         import pygcode
         from pygcode import Line
+        self.part = GCodePart()
         z_offset = 0
         z = 0.0 + z_offset
         x = 0.0
         y = 0.0
         self.path = []
+        extrusions = []
+        e_value = 0.0
         puntos = []
         lineas = []
         tool_path = []
@@ -163,8 +213,9 @@ class RobPath():
                 if len(line.block.words) == 2:
                     continue
                 extrude_move = False
-                for letterCode in line.block.words:
-                    if letterCode.letter == 'E':
+                if len(line.block.modal_params) > 0:
+                    if line.block.modal_params[0].letter == 'E':
+                        #TODO: Pode dar erro se hai mais de un model_param
                         extrude_move = True
                 for block in line.block.gcodes:
                     if type(block) == pygcode.gcodes.GCodeLinearMove and extrude_move:
@@ -172,6 +223,7 @@ class RobPath():
                             z = block.Z + z_offset
                             print 'OLLO: Proceso en Z'
                         if block.X is not None and block.Y is not None:
+                            e_value += line.block.modal_params[0].value
                             x = block.X
                             y = block.Y
                             parray = np.array([x, y, z])
@@ -188,17 +240,21 @@ class RobPath():
                             if len(puntos) > 1:
                                 # REVIEW:  se hai varios puntos sen proceso, vaise o ultimo
                                 lineas.append(puntos)
+                                extrusions.append(e_value)
                             puntos = []
+                            e_value = 0
                         parray = np.array([x, y, z])
                         if z >= 0.0:
                             puntos.append(parray)
         if len(puntos) > 1:
             lineas.append(puntos)
+            extrusions.append(e_value)
         #TODO: Crear funcion especifica para anhadir orientacions aos ptos
         tool_path = self.planning.get_path_from_fill_lines(lineas)
         # focus = 0
         # tool_path = self.planning.translate_path(tool_path, np.array([0, 0, focus]))
         self.path.extend(tool_path)
+        return [extrusions]
 
     def load_orientations(self, filename):
         '''
@@ -570,12 +626,39 @@ class RobPath():
                 segments = []
         return new_tool_path
 
+    def calculate_extrusions(self, extrusions = None, lengths=None, height=None, width=None):
+        if not lengths:
+            lengths=self.lenght_tracks
+        process_speed = self.part.speed
+        filament_diameter = 2.85
+        feedrate = 0.0
+        if extrusions is None:
+            if not height:
+                height=self.part.track_height
+            if not width:
+                width=self.part.track_width
+            filament_volume = (width-height)*height+3.141593*(height/2)**2
+            filament_extrudded = 3.141593*(filament_diameter/2)**2
+            unit_extrusion = filament_volume / filament_extrudded
+            feedrate = unit_extrusion * process_speed * 60
+            extrusions = []
+            for layer in lengths:
+                extrusion_layer = []
+                for track in layer:
+                    extrusion_layer.append(track*unit_extrusion)
+                extrusions.append(extrusion_layer)
+        else:
+            feedrate = extrusions[0][0] / (lengths[0][0] / (60 * process_speed))
+        return extrusions, feedrate
+
     def get_process_time(self):
         time = 0
         if len(self.path) > 0:
             length = self.planning.path_length(self.path)
             time = self.planning.path_time(
-                length, self.part.speed, self.part.travel_speed)
+                length[:2], self.part.speed, self.part.travel_speed)
+        #TODO: extrusions con length[2]
+        self.lenght_tracks = length[2]
         return length[0] / self.part.speed, length[1] / self.part.travel_speed
 
 

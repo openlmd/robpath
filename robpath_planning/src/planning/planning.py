@@ -96,7 +96,8 @@ class Planning:
                     indexes = indexes[:len(indexes)-1]
                 if self.start_point_dir == 'min':
                     indexes = np.flip(indexes)
-                fill_lines.append(points[indexes])
+                for segment in np.reshape(indexes, (-1,2)):
+                    fill_lines.append(points[segment])
         i_lines = []
         for line in fill_lines:
             if invert:
@@ -185,11 +186,16 @@ class Planning:
 
     def path_length(self, path):
         laser_dist, travel_dist = 0, 0
+        lengths = []
         for layer in path:
+            track_lenghts = []
             for track in layer:
+                dist = 0
                 for n in range(len(track[:-1])):
-                    dist = calc.distance(track[n][0], track[n+1][0])
+                    dist += calc.distance(track[n][0], track[n+1][0])
                 laser_dist = laser_dist + dist
+                track_lenghts.append(dist)
+            lengths.append(track_lenghts)
         travel_layer = 0
         for l in range(len(path[:-1])):
             last_current_p = path[l][-1][-1][0]
@@ -204,7 +210,7 @@ class Planning:
                 dist = calc.distance(last_current_p, first_next_p)
                 travel_track = travel_track + dist
         travel_dist = travel_track + travel_layer
-        return laser_dist, travel_dist
+        return laser_dist, travel_dist, lengths
 
     def path_time(self, length, laser_speed, travel_speed):
         laser_dist, travel_dist = length
@@ -246,7 +252,7 @@ def multi_offset (contours, offset, z_level=None):
         #TODO: comprobar se pode anhadir o ultimo punto automaticmanet
         # Reshape contour list to a 2D point matrix
         solution = solution.reshape(len(solution)/2,2)
-        if z_level:
+        if z_level is not None:
             # Add Z value to all points
             b = np.ones((solution.shape[0], 1)) * z_level
             solution = np.concatenate((solution,b), axis = 1)

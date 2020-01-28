@@ -380,10 +380,11 @@ class RobPathUI(QtGui.QMainWindow):
                     print time_str
                     self.labelTime.setText(time_str)
                 elif filename.split('.')[-1] == 'gcode':
-                    self.robpath.load_gcode(filename)
+                    self.rapid.extrusions = self.robpath.load_gcode(filename)
                     self.new_xml = True
                     self.timer.start(100)
                     self.btnSaveRapid.setEnabled(True)
+                    self.changeProcess()
                     length = self.robpath.planning.path_length(self.robpath.path)
                     laser_time = length[0] / self.sbSpeed.value()
                     travel_time = length[1] / self.sbTravel.value()
@@ -529,6 +530,8 @@ class RobPathUI(QtGui.QMainWindow):
 
         self.rapid.dynamic_params = self.robpath.dynamic_params
         self.rapid.params_group = self.robpath.params_group
+        self.changeProcess()
+        self.rapid.extrusions, self.rapid.feedrate_speed = self.robpath.calculate_extrusions(extrusions=self.rapid.extrusions)
         #if os.path.exists(self.dirname + '/base_frame.json'):
         #    self.robpath.load_base_frame(self.dirname + '/base_frame.json')
         self.robpath.path = self.robpath.transform_path(self.robpath.path)
