@@ -70,6 +70,8 @@ class Rapid():
         elif self.laser_type == 'fdm-serial':
             LASER_TEMPLATE += '\n    TPWrite "Comprobar equipamento!";\n'
             LASER_TEMPLATE += '    Stop;\n'
+        elif self.laser_type == 'fdm-atico':
+            LASER_TEMPLATE += '\n    !INICIO";\n'
         return LASER_TEMPLATE %{'power': self.power}
 
     def rapid_laser_stop(self):
@@ -85,6 +87,10 @@ class Rapid():
             LASER_TEMPLATE += '\n! Sin parada laser (waam)\n'
         elif self.laser_type == 'fdm-serial':
             LASER_TEMPLATE += '\n    TPWrite "Programa finalizado!";\n'
+        elif self.laser_type == 'fdm-atico':
+            LASER_TEMPLATE += '\n    TPWrite "Programa finalizado!";\n'
+            LASER_TEMPLATE += '    Stop;\n'
+
         return LASER_TEMPLATE
 
     def rapid_feeder_conf(self, module_name='Robpath'):
@@ -122,6 +128,21 @@ class Rapid():
             FEEDER_TEMPLATE += '    Write pcwrite, "F%f";\n' % (self.feedrate_speed)
             FEEDER_TEMPLATE += '    Write pcwrite, "E10";\n'
             FEEDER_TEMPLATE += '    Stop;\n'
+        elif self.feeder_type == 'fdm-atico':
+            f_speed = self.feedrate_speed
+            t_polimero = 220
+            t_fibra = 240
+            t_mesa = 60
+            #TODO: calcular F ou lela
+            FEEDER_TEMPLATE += '    SetDO PET_EXTR1, 0;\n'
+            FEEDER_TEMPLATE += '    SetDO PET_EXTR2, 0;\n'
+            FEEDER_TEMPLATE += '    SetDO PET_CORTE, 0;\n'
+            FEEDER_TEMPLATE += '    SetGO CSG_VEL, "%f";\n' % (f_speed)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP1, "%f";\n' % (t_polimero)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP2, "%f";\n' % (t_fibra)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP_MESA, "%f";\n' % (t_mesa)
+            FEEDER_TEMPLATE += '    WaitTime 1;\n'
+            FEEDER_TEMPLATE += '    WaitDI COND_OK, 1;\n'
         return FEEDER_TEMPLATE %{'carrier': self.carrier,
                                 'stirrer': self.stirrer,
                                 'turntable': self.turntable}
@@ -142,6 +163,14 @@ class Rapid():
             FEEDER_TEMPLATE += '\nReset doTPSReady;\n'
         elif self.feeder_type == 'fdm-serial':
             FEEDER_TEMPLATE += '   Close pcwrite;\n'
+        elif self.feeder_type == 'fdm-atico':
+            FEEDER_TEMPLATE += 'SetDO PET_EXTR1, 0;\n'
+            FEEDER_TEMPLATE += '    SetDO PET_EXTR2, 0;\n'
+            FEEDER_TEMPLATE += '    SetDO PET_CORTE, 0;\n'
+            FEEDER_TEMPLATE += '    SetGO CSG_VEL, "%f";\n' % (0)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP1, "%f";\n' % (0)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP2, "%f";\n' % (0)
+            FEEDER_TEMPLATE += '    SetGO CSG_TEMP_MESA, "%f";\n' % (0)
         return FEEDER_TEMPLATE
 
     def load_template(self):
@@ -174,6 +203,8 @@ class Rapid():
             laser_out = 'doFr1ArcOn'
         elif self.laser_type == 'fdm-serial':
             laser_out = 'NO_LASER'
+        elif self.laser_type == 'fdm-atico':
+            laser_out = 'PET_EXTR1'
 
         laser_conf = self.rapid_laser_conf()
         feeder_conf = self.rapid_feeder_conf(module_name)
@@ -237,8 +268,8 @@ class Rapid():
                     n_targets += 1
         moves = '\n'.join([moves, '\n'])
 
-        tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[20,[70,30,123.5],[0,0,1,0],1,0,1]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
-        wobj = '[FALSE,FALSE,"STN1",[[0,0,0],[1,0,0,0]],[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
+        tool = '[TRUE,[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]],[1,[10,0,75],[1,0,0,0],0,0,0]]' %(self.tool[0][0], self.tool[0][1], self.tool[0][2], self.tool[1][0], self.tool[1][1], self.tool[1][2], self.tool[1][3])
+        wobj = '[FALSE,TRUE,"",[[0,0,0],[1,0,0,0]],[[%.1f,%.1f,%.1f],[%f,%f,%f,%f]]]' %(self.workobject[0][0], self.workobject[0][1], self.workobject[0][2], self.workobject[1][0], self.workobject[1][1], self.workobject[1][2], self.workobject[1][3])
 
         return RAPID_TEMPLATE %{'module_name': module_name,
                                 'laser_out': laser_out,

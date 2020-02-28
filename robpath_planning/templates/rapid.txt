@@ -3,12 +3,12 @@ MODULE %(module_name)s
     PERS tooldata %(tool_name)s:=%(tool)s;
     PERS wobjdata %(wobj_name)s:=%(wobj)s;
     
-    CONST num ext_axis0 := 0;
-    CONST num ext_axis1 := 0;
-    CONST num ext_axis2 := 0;
+    CONST num ext_axis0 := 9E+09;
+    CONST num ext_axis1 := 9E+09;
+    CONST num ext_axis2 := 9E+09;
 
-    VAR triggdata laserON%(module_name)s;
-    VAR triggdata laserOFF%(module_name)s;
+    VAR intnum parada_extrusor_int;
+
     %(feeder_triggs)s
 
     CONST speeddata vRobpath:=[%(speed)i,500,5000,1000];
@@ -17,18 +17,18 @@ MODULE %(module_name)s
     %(targets)s
 
 PROC claddingRobpath()
+    CONNECT parada_extrusor_int WITH parada_extrusor_trap;
+    ISignalDI COND_OK, 0, parada_extrusor_int;
+
     %(moves)s
 ENDPROC
 
 PROC main%(module_name)s()
 
     %(laser_conf)s
-    TriggEquip laserON%(module_name)s, 0 \Start, 0 \DOp:=%(laser_out)s, 1;
-    TriggEquip laserOFF%(module_name)s, 0, 0 \DOp:=%(laser_out)s, 0;
 
     %(feeder_conf)s
 
-    ActUnit STN1;
     ConfL \Off;
 
     MoveJ Offs(Trobpath0, 0, 0, 15.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
@@ -42,5 +42,19 @@ PROC main%(module_name)s()
     %(laser_stop)s
 
 ENDPROC
+
+TRAP parada_extrusor_trap
+    VAR robtarget stop_pos;
+    StopMove;
+    StorePath;
+    stop_pos := CRobT(\Tool:=%(tool_name)s \WObj:=%(wobj_name)s);
+    MoveL Offs(stop_pos, 0, 0, 20.000000),vRobpathT,z0,%(tool_name)s\WObj:=%(wobj_name)s;
+    Write pcwrite, "ERROR: Comprobar estado extrusor";
+    Stop;
+    MoveL stop_pos, vRobpathT,fine,%(tool_name)s\WObj:=%(wobj_name)s;
+    WaitDI  COND_OK, 1;
+    RestoPath;
+    StartMove;
+ENDTRAP
 
 ENDMODULE

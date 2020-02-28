@@ -57,13 +57,15 @@
       "medicoat",
       "tps5000",
       "tps5000waam",
-      "fdm-serial"
+      "fdm-serial",
+      "fdm-atico"
     ],
     "laser_type": [
       "trudisk",
       "rofin_rf",
       "waam",
-      "fdm-serial"
+      "fdm-serial",
+      "fdm-atico"
     ],
     "robot": [
       "abb",
